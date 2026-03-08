@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gen: 48 Third Editionに参加してみた | Ayappi Canvas</title>
+  <link rel="icon" type="image/jpeg" href="../icon.jpeg">
+
+  <meta name="description" content="Runway という有名な生成AIプラットフォームがコンペを開催したので、試しに参加してみました。 結論、楽しかったです！ コンペの内容はとてもシンプルで、与えられたお題をもとに、2日以内に1分以上4分未満の映像作品を作るというもの。チーム…">
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="Gen: 48 Third Editionに参加してみた">
+  <meta property="og:description" content="Runway という有名な生成AIプラットフォームがコンペを開催したので、試しに参加してみました。 結論、楽しかったです！ コンペの内容はとてもシンプルで、与えられたお題をもとに、2日以内に1分以上4分未満の映像作品を作るというもの。チーム…">
+  <meta property="og:url" content="https://ayappi4649.github.io/ayappi_blog/articles/gen48-third-edition.html">
+  <meta property="og:image" content="https://ayappi4649.github.io/ayappi_blog/icon.jpeg">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Gen: 48 Third Editionに参加してみた">
+  <meta name="twitter:description" content="Runway という有名な生成AIプラットフォームがコンペを開催したので、試しに参加してみました。 結論、楽しかったです！ コンペの内容はとてもシンプルで、与えられたお題をもとに、2日以内に1分以上4分未満の映像作品を作るというもの。チーム…">
+  <meta name="twitter:image" content="https://ayappi4649.github.io/ayappi_blog/icon.jpeg">
+
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #111111;
+      --muted: #51624f;
+      --line: #e2e2de;
+      --surface: #cfcfcf;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      min-height: 100%;
+      font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      overflow-x: hidden;
+    }
+
+    body {
+      position: relative;
+      background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(0, 0, 0, 0.012));
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle at 14% 18%, rgba(0,0,0,0.12) 0 1.25px, transparent 1.9px),
+        radial-gradient(circle at 77% 28%, rgba(0,0,0,0.11) 0 1.3px, transparent 1.95px),
+        radial-gradient(circle at 35% 74%, rgba(0,0,0,0.1) 0 1.18px, transparent 1.82px),
+        radial-gradient(circle at 62% 84%, rgba(0,0,0,0.095) 0 1.12px, transparent 1.76px),
+        radial-gradient(circle at 10% 12%, rgba(0,0,0,0.085) 0 0.72px, transparent 1.18px),
+        radial-gradient(circle at 22% 36%, rgba(0,0,0,0.08) 0 0.68px, transparent 1.12px),
+        radial-gradient(circle at 38% 22%, rgba(0,0,0,0.078) 0 0.66px, transparent 1.08px),
+        radial-gradient(circle at 52% 48%, rgba(0,0,0,0.074) 0 0.68px, transparent 1.12px),
+        radial-gradient(circle at 66% 18%, rgba(0,0,0,0.07) 0 0.64px, transparent 1.04px),
+        radial-gradient(circle at 82% 42%, rgba(0,0,0,0.068) 0 0.66px, transparent 1.08px),
+        radial-gradient(circle at 8% 58%, rgba(255,255,255,0.13) 0 0.82px, transparent 1.3px),
+        radial-gradient(circle at 56% 12%, rgba(255,255,255,0.1) 0 0.76px, transparent 1.22px),
+        radial-gradient(circle at 18% 72%, rgba(0,0,0,0.06) 0 0.58px, transparent 0.98px),
+        radial-gradient(circle at 44% 86%, rgba(0,0,0,0.056) 0 0.56px, transparent 0.94px),
+        radial-gradient(circle at 72% 78%, rgba(0,0,0,0.052) 0 0.54px, transparent 0.92px),
+        linear-gradient(115deg, rgba(0,0,0,0.028) 0, rgba(0,0,0,0.028) 1px, transparent 1px, transparent 24px),
+        linear-gradient(65deg, rgba(255,255,255,0.08) 0, rgba(255,255,255,0.08) 1px, transparent 1px, transparent 26px);
+      background-size: 124px 124px, 142px 142px, 156px 156px, 174px 174px, 26px 26px, 28px 28px, 30px 30px, 28px 28px, 32px 32px, 30px 30px, 74px 74px, 86px 86px, 28px 28px, 30px 30px, 32px 32px, 26px 26px, 30px 30px;
+      background-position: 0 0, 40px 54px, 92px 22px, 124px 88px, 0 0, 8px 6px, 12px 10px, 6px 14px, 10px 4px, 16px 12px, 20px 18px, 62px 12px, 4px 18px, 14px 8px, 18px 14px, 0 0, 8px 10px;
+      mix-blend-mode: multiply;
+      opacity: 0.82;
+      filter: blur(0.16px);
+      z-index: 0;
+    }
+
+    .site-header {
+      position: fixed;
+      inset-inline: 0;
+      top: 0;
+      z-index: 20;
+      height: 88px;
+      pointer-events: none;
+    }
+
+    .site-header__inner {
+      position: relative;
+      height: 100%;
+      padding: 24px 34px 0;
+    }
+
+    .site-header a {
+      position: absolute;
+      top: 24px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--muted);
+      text-decoration: none;
+      pointer-events: auto;
+    }
+
+    .site-header__title { left: 34px; }
+    .site-header__about { right: 34px; }
+
+    .site-header__tagline {
+      position: absolute;
+      left: 34px;
+      top: 46px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      color: rgba(81, 98, 79, 0.88);
+      white-space: nowrap;
+      pointer-events: none;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      padding: 128px 40px 80px;
+    }
+
+    .page-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      column-gap: 64px;
+      align-items: start;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-start;
+      width: fit-content;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 64px;
+      line-height: 1;
+      margin-top: 24px;
+      align-self: start;
+    }
+
+    .back-link:hover { opacity: 0.7; }
+
+    .article { max-width: 600px; }
+
+    .article-title {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.25;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .article-date {
+      margin: 10px 0 0;
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1.5;
+    }
+
+    .article-body {
+      margin-top: 52px;
+      font-size: 16px;
+      line-height: 2.25;
+      word-break: break-word;
+    }
+
+    .article-body p { margin: 0 0 18px; }
+    .article-body h1,
+    .article-body h2,
+    .article-body h3,
+    .article-body h4 {
+      margin: 42px 0 18px;
+      line-height: 1.6;
+    }
+
+    .article-body img {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 42px 0 10px;
+    }
+
+    .article-body .post-figure {
+      width: 100%;
+      margin: 42px 0 18px;
+    }
+
+    .article-body .post-figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .article-body .post-figure figcaption {
+      margin-top: 10px;
+      font-size: 13px;
+      line-height: 1.7;
+      color: rgba(17, 17, 17, 0.72);
+      text-align: center;
+    }
+
+    @media (max-width: 860px) {
+      .page { padding: 112px 24px 64px; }
+      .page-inner {
+        grid-template-columns: 1fr;
+        row-gap: 24px;
+      }
+      .back-link {
+        font-size: 52px;
+        margin-top: 0;
+      }
+      .article { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="site-header__title" href="../index.html">Ayappi Canvas</a>
+      <div class="site-header__tagline">Life is not colorful, life is coloring</div>
+      <a class="site-header__about" href="../about.html">About Me</a>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="page-inner">
+      <a class="back-link" href="../index.html" aria-label="Indexへ戻る">←</a>
+      <article class="article">
+        <header>
+          <h1 class="article-title">Gen: 48 Third Editionに参加してみた</h1>
+          <p class="article-date">September 15, 2024</p>
+        </header>
+        <section class="article-body">
+          <p>Runway という有名な生成AIプラットフォームがコンペを開催したので、試しに参加してみました。</p>
+
+<hr />
+
+<div class="video-embed">
+  <iframe
+    width="70%"
+    height="315"
+    src="https://www.youtube.com/embed/VtD_08N_duY?si=by4QIIu9zNinNwPr"
+    title="Gen:48 Third Edition 参加作品"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen>
+  </iframe>
+</div>
+
+<p>結論、楽しかったです！</p>
+
+<p>コンペの内容はとてもシンプルで、与えられたお題をもとに、2日以内に1分以上4分未満の映像作品を作るというもの。チームで参加するもよし、個人で参加するもよしです。</p>
+
+<p style="background-color: lightgray;">
+  お題やルールはこちらのサイトから確認できます。<br />
+  <a href="https://runwayml.com/gen48" target="_blank" rel="noopener noreferrer">https://runwayml.com/gen48</a>
+</p>
+
+<p>私は、<code>a. Natural Disaster</code>、<code>c. Heartbreak</code>、<code>a. Lone parent</code>、<code>a. Wilderness</code> の要素を選択しました。</p>
+
+<p>また、このコンペの良い点として、生成に必要なクレジットが 300k も支給されます。結局私は映像制作に半分のクレジットも消費しなかったので、かなり贅沢に生成できそうです。</p>
+
+<h2>映像制作プロセス</h2>
+
+<p>
+  映像：Runway<br />
+  音楽：SunoAI（歌詞は GPT ベースに自分で調整）<br />
+  効果音：ElevenLabs<br />
+  編集：After Effects<br /><br />
+  製作時間：8 hours
+</p>
+
+<p>ストーリーを考える → 各シーンの詳細を決める → 大まかな物語やコマに基づいて音楽と効果音を生成する → SE と音楽だけで枠組みを作る → 作ったベースをもとに映像を生成し、尺にあてはめていく → 最終調整</p>
+
+<h2>最後に</h2>
+
+<p>今回のコンペを通して、Runway のクオリティの高さに驚かされました。動きや人種など、条件によっては制約がまだ多くありますが、基本的に出力された生成物の質は高いです。</p>
+
+<p>制約という意味では、学習素材に偏りがあるのか、たとえば日本人の子供の出力はテキストからでは難しかったです。ほとんどが中東っぽい子供として出力されました。また、どの生成においても、女性だけを入力すると黒人が出てきたり、アジア人と指示すると高い確率でインド人が生成されたりするのが興味深かったです。なんとなく、何を学習しているのかが少し見えてくる気がしますね。（日本人の出力もなんだかんだ難しかったです……。）</p>
+
+<p>とはいえ、去年ではありえないクオリティまで進化しているので、ただただすごいの一言に尽きます。Suno も ElevenLabs も日進月歩で進化し続けているので、今後もクリエイティブ制作はもっと楽しくなりそうですね！</p>
+        </section>
+      </article>
+    </div>
+  </main>
+</body>
+</html>

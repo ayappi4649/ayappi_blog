@@ -62,4 +62,11 @@ window.ARTICLES = [
     date: "2026-2-22",
     contentFile: "./posts/「おもしろがる」という哲学.html"
  },
+ { 
+    id:10, 
+    year: 2025, 
+    title: "卒業旅行（ドバイ編）｜暮らしてきた異国を訪れて考えたこと", 
+    date: "2025/11/14", 
+    contentFile: "./posts/卒業旅行（ドバイ編）｜暮らしてきた異国を訪れて考えたこと.html" 
+  },
 ];

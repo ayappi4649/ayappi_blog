@@ -3,15 +3,32 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>About Me | Ayappi Canvas</title>
-  <link rel="icon" type="image/jpeg" href="./icon.jpg">
+  <title>Ayappi Canvas</title>
+  <link rel="icon" type="image/jpeg" href="./icon.jpeg">
+
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Casual space where I share what I’m learning and thinking about. ">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Home — Ayappi Blog">
+  <meta property="og:description" content="Casual space where I share what I’m learning and thinking about. ">
+  <meta property="og:url" content="https://ayappi4649.github.io/ayappi_blog/index.html">
+
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Home — Ayappi Blog">
+  <meta name="twitter:description" content="Casual space where I share what I’m learning and thinking about. ">
   <style>
     :root {
       --bg: #ffffff;
       --text: #111111;
       --muted: #51624f;
       --line: #e2e2de;
-      --link: #5b6771;
+      --input-border: #d8d8d4;
+      --input-focus: #bcbcb6;
+      --input-bg: rgba(255, 255, 255, 0.28);
+      --sprite-width: 104px;
+      --sprite-height: 120px;
+      --floor-offset: 8px;
     }
 
     * {
@@ -22,11 +39,11 @@
     body {
       margin: 0;
       width: 100%;
-      min-height: 100%;
+      height: 100%;
+      overflow: hidden;
       font-family: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
       color: var(--text);
       background: var(--bg);
-      overflow-x: hidden;
     }
 
     body {
@@ -111,67 +128,160 @@
       pointer-events: none;
     }
 
-    .page {
+    .page-scroll {
       position: relative;
       z-index: 1;
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 108px 32px 80px;
+      height: 100vh;
+      overflow-y: auto;
+      padding-inline: 24px;
     }
 
-    .section-label {
-      margin: 0;
-      text-align: center;
-      font-size: 15px;
-      font-weight: 500;
-      letter-spacing: 0.16em;
+    .page-inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 156px 0 120px;
+    }
+
+    .toolbar {
+      max-width: 320px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+    }
+
+    .search-input,
+    .year-select {
+      height: 42px;
+      border: 1px solid var(--input-border);
+      border-radius: 12px;
+      background: var(--input-bg);
+      outline: none;
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .search-input {
+      width: 168px;
+      padding: 0 18px;
+    }
+
+    .search-input::placeholder {
+      color: #c7c7c2;
+      font-weight: 600;
+    }
+
+    .year-wrap {
+      position: relative;
+      width: 130px;
+    }
+
+    .year-select {
+      width: 100%;
+      appearance: none;
+      padding: 0 38px 0 22px;
+      cursor: pointer;
+    }
+
+    .search-input:focus,
+    .year-select:focus {
+      border-color: var(--input-focus);
+    }
+
+    .year-wrap::after {
+      content: "˅";
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      font-size: 16px;
+      font-weight: 700;
     }
 
     .divider {
       width: 100%;
+      max-width: 816px;
       height: 1px;
+      margin: 20px auto 0;
       background: var(--line);
-      margin: 22px 0 28px;
     }
 
-    .intro {
-      font-size: 16px;
-      line-height: 1.9;
-      margin-bottom: 64px;
+    .article-list {
+      max-width: 520px;
+      margin: 0 auto;
+      padding-top: 40px;
     }
 
-    .intro p {
+    .year-group + .year-group {
+      margin-top: 42px;
+    }
+
+    .year-title {
       margin: 0 0 18px;
-    }
-
-    .group + .group {
-      margin-top: 34px;
-    }
-
-    .group-title {
-      margin: 0 0 14px;
-      font-size: 18px;
+      font-size: 14px;
       font-weight: 700;
-      line-height: 1.5;
+      letter-spacing: -0.01em;
     }
 
-    .link-list {
-      margin: 0;
-      padding-left: 24px;
-      list-style: square;
+    .article-items {
+      display: flex;
+      flex-direction: column;
+      gap: 34px;
     }
 
-    .link-list li + li {
-      margin-top: 10px;
+    .article-link {
+      display: inline-block;
+      max-width: 100%;
+      color: var(--text);
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      text-decoration-thickness: 1px;
+      font-size: 16px;
+      line-height: 1.55;
     }
 
-    .link-list a {
-      color: var(--link);
-      text-underline-offset: 3px;
-    }
-
-    .link-list a:hover {
+    .article-link:hover {
       opacity: 0.7;
+    }
+
+    .article-date {
+      margin-top: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .article-summary {
+      margin-top: 10px;
+      font-size: 13px;
+      line-height: 1.75;
+      color: rgba(17, 17, 17, 0.68);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-width: 100%;
+    }
+
+    .empty-state {
+      padding-top: 30px;
+      font-size: 14px;
+      color: #444444;
+    }
+
+    .sprite {
+      position: fixed;
+      left: 0;
+      bottom: var(--floor-offset);
+      width: var(--sprite-width);
+      height: var(--sprite-height);
+      pointer-events: none;
+      z-index: 30;
+      background-repeat: no-repeat;
+      image-rendering: pixelated;
+      transform: translateZ(0);
     }
 
     @media (max-width: 640px) {
@@ -188,8 +298,25 @@
         right: 20px;
       }
 
-      .page {
-        padding: 108px 20px 64px;
+      .page-scroll {
+        padding-inline: 16px;
+      }
+
+      .toolbar {
+        max-width: 100%;
+        gap: 12px;
+      }
+
+      .search-input {
+        width: 160px;
+      }
+
+      .year-wrap {
+        width: 120px;
+      }
+
+      .article-list {
+        max-width: 100%;
       }
     }
   </style>
@@ -203,44 +330,410 @@
     </div>
   </header>
 
-  <main class="page">
-    <h1 class="section-label">ABOUT</h1>
-    <div class="divider"></div>
+  <main class="page-scroll">
+    <div class="page-inner">
+      <section>
+        <div class="toolbar">
+          <input id="title-search" class="search-input" type="text" placeholder="タイトル検索..." />
+          <div class="year-wrap">
+            <select id="year-filter" class="year-select">
+              <option value="all">すべて</option>
+            </select>
+          </div>
+        </div>
+        <div class="divider"></div>
+      </section>
 
-    <section class="intro">
-      <p>こんにちは、Ayappiです。17年間海外で育ち、大学から日本に帰国しました。25年に慶應義塾大学（SFC）を卒業。関心分野は、機械学習/web3.0などの最新テクノロジーです。ここは私の日々の学びや考えを記録していく、ゆるい個人サイトになります。もし気になることがあれば、お気軽にお声がけください！</p>
-      <p>Hi, my name is Ayappi. I grew up overseas and graduated from Keio University SFC in 2025. I’m interested in emerging technologies such as machine learning and Web3. This is a casual space where I share what I’m learning and thinking about. If any of this interests you, feel free to reach out ! </p>
-    </section>
-
-    <section class="group">
-      <h2 class="group-title">Main SNS</h2>
-      <ul class="link-list">
-        <li><a href="https://x.com/ayappi_froggy" target="_blank" rel="noopener noreferrer">Twitter (X)</a></li>
-      </ul>
-    </section>
-
-    <section class="group">
-      <h2 class="group-title">Creative</h2>
-      <ul class="link-list">
-        <li><a href="https://www.instagram.com/ayappi_art/" target="_blank" rel="noopener noreferrer">Instagram</a></li>
-      </ul>
-    </section>
-
-    <section class="group">
-      <h2 class="group-title">VRC SNS</h2>
-      <ul class="link-list">
-        <li><a href="https://x.com/froppii_" target="_blank" rel="noopener noreferrer">Twitter (X)</a></li>
-        <li><a href="https://www.youtube.com/@ayappii_vrc" target="_blank" rel="noopener noreferrer">Youtube</a></li>
-        <li><a href="https://ayappii-vrc.github.io/ayappii_room/" target="_blank" rel="noopener noreferrer">Website</a></li>
-      </ul>
-    </section>
-
-    <section class="group">
-      <h2 class="group-title">Published</h2>
-      <ul class="link-list">
-        <li><a href="https://www.amazon.co.jp/%E3%80%90AI%E7%B5%B5%E6%9C%AC%E3%80%91%E6%95%99%E3%81%88%E3%81%A6%E6%95%99%E3%81%88%E3%81%A6%E5%A6%96%E7%B2%BE%E3%81%95%E3%82%93-%E4%BD%90%E8%97%A4-%E6%96%87%E5%BD%A6-ebook/dp/B0CK9N5RYF" target="_blank" rel="noopener noreferrer">Kindle</a></li>
-      </ul>
-    </section>
+      <section class="article-list" id="article-list"></section>
+    </div>
   </main>
+
+  <div id="sprite" class="sprite" aria-hidden="true"></div>
+
+  <script src="./articles.js"></script>
+  <script>
+    const SPRITE_FRAME_WIDTH = 60;
+    const SPRITE_FRAME_HEIGHT = 68;
+    const WALK_FRAME_COUNT = 3;
+    const MOVE_SPEED = 40;
+    const STOP_DISTANCE = 1;
+    const CURSOR_ACTIVE_MS = 2200;
+    const RANDOM_DELAY_MIN = 1000;
+    const RANDOM_DELAY_RANGE = 4200;
+    const RANDOM_STOP_CHANCE = 0.8;
+    const LEFT_MOVEMENT_AREA_RATIO = 1 / 3;
+
+    const PRIMARY_SPRITE_SOURCES = {
+      rightIdle: "./left-idle.png",
+      rightWalk: "./left-walk.png",
+      leftIdle: "./right-idle.png",
+      leftWalk: "./right-walk.png"
+    };
+
+    const PRIMARY_IDLE_SPRITE_DIMENSIONS = {
+      right: { width: 60, height: 120 },
+      left: { width: 60, height: 120 }
+    };
+
+    const ARTICLES = Array.isArray(window.ARTICLES) ? window.ARTICLES : [];
+
+    const articleList = document.getElementById("article-list");
+    const titleSearch = document.getElementById("title-search");
+    const yearFilter = document.getElementById("year-filter");
+    const primarySprite = document.getElementById("sprite");
+
+    const globalState = {
+      search: "",
+      selectedYear: "all",
+      viewportWidth: window.innerWidth,
+      mouseX: null,
+      mouseLastSeen: 0,
+      lastFrameTime: performance.now(),
+      summaries: {}
+    };
+
+    function createActor(options) {
+      return {
+        spriteElement: options.spriteElement,
+        spriteSources: options.spriteSources,
+        movementSide: options.movementSide,
+        movementRatio: options.movementRatio,
+        actorX: options.initialX,
+        actorDirection: options.initialDirection,
+        actorMoving: false,
+        actorFrame: 0,
+        targetX: options.initialTargetX,
+        frameTimer: 0,
+        randomMoveTimer: null,
+        isPaused: false,
+        idleSpriteDimensions: options.idleSpriteDimensions
+      };
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+    }
+
+    function getMovementBounds(viewportWidth, movementSide, movementRatio) {
+      const areaWidth = viewportWidth * movementRatio;
+
+      if (movementSide === "right") {
+        const minX = viewportWidth - areaWidth - SPRITE_FRAME_WIDTH * 0.85;
+        const maxX = viewportWidth - SPRITE_FRAME_WIDTH * 0.15;
+        return { minX, maxX };
+      }
+
+      const minX = -SPRITE_FRAME_WIDTH * 0.85;
+      const maxX = areaWidth - SPRITE_FRAME_WIDTH * 0.15;
+      return { minX, maxX };
+    }
+
+    function getInitialTargetX(viewportWidth, movementSide, movementRatio) {
+      const bounds = getMovementBounds(viewportWidth, movementSide, movementRatio);
+      if (movementSide === "right") {
+        return clamp(viewportWidth - viewportWidth * movementRatio * 0.35, bounds.minX, bounds.maxX);
+      }
+      return clamp(viewportWidth * movementRatio * 0.35, bounds.minX, bounds.maxX);
+    }
+
+    function pickRandomTarget(actor) {
+      const { minX, maxX } = getMovementBounds(globalState.viewportWidth, actor.movementSide, actor.movementRatio);
+      const shortStep = 60 + Math.random() * 140;
+      const direction = Math.random() < 0.5 ? -1 : 1;
+      const nearbyTarget = clamp(actor.actorX + direction * shortStep, minX, maxX);
+      const edgeTarget = Math.random() < 0.18
+        ? (Math.random() < 0.5 ? minX : maxX)
+        : nearbyTarget;
+
+      return edgeTarget;
+    }
+
+    function hasCursorTarget() {
+      return globalState.mouseX !== null && Date.now() - globalState.mouseLastSeen < CURSOR_ACTIVE_MS;
+    }
+
+    function queueRandomMove(actor) {
+      if (actor.randomMoveTimer || hasCursorTarget()) {
+        return;
+      }
+
+      actor.randomMoveTimer = window.setTimeout(() => {
+        actor.isPaused = false;
+        actor.targetX = pickRandomTarget(actor);
+        actor.randomMoveTimer = null;
+      }, RANDOM_DELAY_MIN + Math.random() * RANDOM_DELAY_RANGE);
+    }
+
+    function groupArticles(articles) {
+      return articles.reduce((acc, article) => {
+        const key = String(article.year);
+        if (!acc[key]) {
+          acc[key] = [];
+        }
+        acc[key].push(article);
+        return acc;
+      }, {});
+    }
+
+    function formatDisplayDate(dateString) {
+      const date = new Date(dateString);
+      if (Number.isNaN(date.getTime())) {
+        return dateString;
+      }
+
+      return date.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      });
+    }
+
+    function populateYearOptions() {
+      const years = [...new Set(
+        ARTICLES
+          .map((article) => article.year)
+          .filter((year) => year !== undefined && year !== null && year !== "")
+      )].sort((a, b) => b - a);
+
+      yearFilter.innerHTML = `
+        <option value="all">すべて</option>
+        ${years.map((year) => `<option value="${year}">${year}</option>`).join("")}
+      `;
+    }
+
+    function extractSummaryFromHtml(htmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, "text/html");
+
+      doc.querySelectorAll("script, style, img, figure, iframe, video, audio").forEach((node) => node.remove());
+
+      const rawText = (doc.body.textContent || "")
+        .replace(/\s+/g, " ")
+        .replace(/　+/g, " ")
+        .trim();
+
+      if (!rawText) {
+        return "";
+      }
+
+      const shortened = rawText.slice(0, 120).trim();
+      return rawText.length > 120 ? `${shortened}…` : shortened;
+    }
+
+    async function loadSummaries() {
+      const tasks = ARTICLES.map(async (article) => {
+        if (!article.contentFile) {
+          globalState.summaries[article.id] = "";
+          return;
+        }
+
+        try {
+          const response = await fetch(article.contentFile);
+          if (!response.ok) {
+            throw new Error("Failed to load summary source");
+          }
+
+          const html = await response.text();
+          globalState.summaries[article.id] = extractSummaryFromHtml(html);
+        } catch (error) {
+          globalState.summaries[article.id] = "";
+        }
+      });
+
+      await Promise.all(tasks);
+    }
+
+    function renderArticles() {
+      const normalizedSearch = globalState.search.trim().toLowerCase();
+      const filteredArticles = ARTICLES.filter((article) => {
+        const matchesSearch = article.title.toLowerCase().includes(normalizedSearch);
+        const matchesYear = globalState.selectedYear === "all" || article.year === Number(globalState.selectedYear);
+        return matchesSearch && matchesYear;
+      });
+
+      if (filteredArticles.length === 0) {
+        articleList.innerHTML = '<div class="empty-state">該当する記事がありません。</div>';
+        return;
+      }
+
+      const sortedArticles = [...filteredArticles].sort((a, b) => {
+        const aTime = new Date(a.date).getTime();
+        const bTime = new Date(b.date).getTime();
+
+        if (!Number.isNaN(aTime) && !Number.isNaN(bTime) && aTime !== bTime) {
+          return bTime - aTime;
+        }
+
+        return String(b.date).localeCompare(String(a.date), "ja");
+      });
+
+      const grouped = groupArticles(sortedArticles);
+      const sortedYears = Object.keys(grouped).map(Number).sort((a, b) => b - a);
+
+      articleList.innerHTML = sortedYears.map((year) => {
+        const items = grouped[String(year)].map((article) => {
+          const articleUrl = `./article.html?id=${encodeURIComponent(article.id)}`;
+          const displayDate = formatDisplayDate(article.date);
+          const summary = globalState.summaries[article.id] || "";
+
+          return `
+            <article>
+              <a class="article-link" href="${articleUrl}">${escapeHtml(article.title)}</a>
+              <div class="article-date">${escapeHtml(displayDate)}</div>
+              ${summary ? `<div class="article-summary">${escapeHtml(summary)}</div>` : ""}
+            </article>
+          `;
+        }).join("");
+
+        return `
+          <div class="year-group">
+            <h2 class="year-title">${year}</h2>
+            <div class="article-items">${items}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function updateSprite(actor) {
+      const spriteUrl = actor.actorDirection === "left"
+        ? (actor.actorMoving ? actor.spriteSources.leftWalk : actor.spriteSources.leftIdle)
+        : (actor.actorMoving ? actor.spriteSources.rightWalk : actor.spriteSources.rightIdle);
+
+      const idleSize = actor.actorDirection === "left"
+        ? actor.idleSpriteDimensions.left
+        : actor.idleSpriteDimensions.right;
+
+      actor.spriteElement.style.left = `${actor.actorX}px`;
+      actor.spriteElement.style.width = actor.actorMoving ? `${SPRITE_FRAME_WIDTH}px` : `${idleSize.width}px`;
+      actor.spriteElement.style.height = actor.actorMoving ? `${SPRITE_FRAME_HEIGHT}px` : `${idleSize.height}px`;
+      actor.spriteElement.style.backgroundImage = `url(${spriteUrl})`;
+      actor.spriteElement.style.backgroundPosition = actor.actorMoving ? `${-actor.actorFrame * SPRITE_FRAME_WIDTH}px 0px` : "center bottom";
+      actor.spriteElement.style.backgroundSize = actor.actorMoving
+        ? `${SPRITE_FRAME_WIDTH * WALK_FRAME_COUNT}px ${SPRITE_FRAME_HEIGHT}px`
+        : "contain";
+    }
+
+    function updateActor(actor, elapsed) {
+      const movementBounds = getMovementBounds(globalState.viewportWidth, actor.movementSide, actor.movementRatio);
+      const currentTarget = hasCursorTarget()
+        ? clamp(globalState.mouseX - SPRITE_FRAME_WIDTH / 2, movementBounds.minX, movementBounds.maxX)
+        : actor.targetX;
+
+      const distance = currentTarget - actor.actorX;
+      const absDistance = Math.abs(distance);
+
+      if (absDistance > STOP_DISTANCE) {
+        const step = Math.min(absDistance, MOVE_SPEED * elapsed);
+        actor.actorX += Math.sign(distance) * step;
+        actor.actorDirection = distance < 0 ? "left" : "right";
+        actor.actorMoving = true;
+        actor.frameTimer += elapsed;
+
+        if (actor.frameTimer >= 0.16) {
+          actor.actorFrame = (actor.actorFrame + 1) % WALK_FRAME_COUNT;
+          actor.frameTimer = 0;
+        }
+
+        if (actor.randomMoveTimer) {
+          window.clearTimeout(actor.randomMoveTimer);
+          actor.randomMoveTimer = null;
+        }
+      } else {
+        actor.actorX = currentTarget;
+        actor.actorFrame = 0;
+        actor.frameTimer = 0;
+
+        if (hasCursorTarget()) {
+          actor.actorMoving = false;
+          actor.isPaused = false;
+        } else if (!actor.isPaused) {
+          actor.isPaused = Math.random() < RANDOM_STOP_CHANCE;
+
+          if (actor.isPaused) {
+            actor.actorMoving = false;
+            queueRandomMove(actor);
+          } else {
+            actor.actorMoving = true;
+            actor.targetX = pickRandomTarget(actor);
+          }
+        } else {
+          actor.actorMoving = false;
+        }
+      }
+
+      updateSprite(actor);
+    }
+
+    const primaryActor = createActor({
+      spriteElement: primarySprite,
+      spriteSources: PRIMARY_SPRITE_SOURCES,
+      movementSide: "left",
+      movementRatio: LEFT_MOVEMENT_AREA_RATIO,
+      initialX: -SPRITE_FRAME_WIDTH,
+      initialTargetX: getInitialTargetX(window.innerWidth, "left", LEFT_MOVEMENT_AREA_RATIO),
+      initialDirection: "right",
+      idleSpriteDimensions: PRIMARY_IDLE_SPRITE_DIMENSIONS
+    });
+
+    function animate(now) {
+      const elapsed = (now - globalState.lastFrameTime) / 1000;
+      globalState.lastFrameTime = now;
+
+      updateActor(primaryActor, elapsed);
+
+      window.requestAnimationFrame(animate);
+    }
+
+    titleSearch.addEventListener("input", (event) => {
+      globalState.search = event.target.value;
+      renderArticles();
+    });
+
+    yearFilter.addEventListener("change", (event) => {
+      globalState.selectedYear = event.target.value;
+      renderArticles();
+    });
+
+    window.addEventListener("resize", () => {
+      globalState.viewportWidth = window.innerWidth;
+      const movementBounds = getMovementBounds(globalState.viewportWidth, primaryActor.movementSide, primaryActor.movementRatio);
+      primaryActor.actorX = clamp(primaryActor.actorX, movementBounds.minX, movementBounds.maxX);
+      primaryActor.targetX = clamp(primaryActor.targetX, movementBounds.minX, movementBounds.maxX);
+    });
+
+    window.addEventListener("mousemove", (event) => {
+      globalState.mouseX = event.clientX;
+      globalState.mouseLastSeen = Date.now();
+
+      if (primaryActor.randomMoveTimer) {
+        window.clearTimeout(primaryActor.randomMoveTimer);
+        primaryActor.randomMoveTimer = null;
+      }
+    });
+
+    window.addEventListener("mouseleave", () => {
+      globalState.mouseX = null;
+      globalState.mouseLastSeen = 0;
+    });
+
+    async function init() {
+      populateYearOptions();
+      await loadSummaries();
+      renderArticles();
+      updateSprite(primaryActor);
+      window.requestAnimationFrame(animate);
+    }
+
+    init();
+  </script>
 </body>
 </html>

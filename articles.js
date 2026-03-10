@@ -75,5 +75,12 @@ window.ARTICLES = [
   title: "卒業旅行（マレーシア編）レポート②",
   date: "2025/11/15",
   contentFile: "./posts/卒業旅行（マレーシア編）レポート.html"
+  },
+  {
+  id: 12,
+  year: 2026,
+  title: "休みすぎて逆に辛くなった話",
+  date: "2026/03/10",
+  contentFile: "./posts/休みすぎると逆に辛くなる話.html"
 },
 ];

@@ -87,7 +87,7 @@ window.ARTICLES = [
   id: 13,
   year: 2026,
   title: "恋愛について、あれこれ考えてみる",
-  date: "2026年5月23日",
+  date: "2026/05/23",
   contentFile: "./posts/恋愛について、あれこれ考えてみる.html"
 },
 ];

@@ -87,14 +87,14 @@ window.ARTICLES = [
   id: 13,
   year: 2026,
   title: "恋愛について、あれこれ考えてみる",
-  date: "2026年5月23日",
+  date: "2026/5/23",
   contentFile: "./posts/恋愛について、あれこれ考えてみる.html"
 },
 {
   id:14,
   year:2026,
   title: "【実験】AIで１枚絵から3D洋服の生成はまだ早いみたい",
-  date: "2026年7月12日",
+  date: "2026/7/12",
   contentFile: "./posts/AIで１枚絵から3D洋服の生成はまだ早いみたい.html"
 },
 ];

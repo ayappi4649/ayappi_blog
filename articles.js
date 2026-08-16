@@ -97,4 +97,11 @@ window.ARTICLES = [
   date: "2026/7/12",
   contentFile: "./posts/AIで１枚絵から3D洋服の生成はまだ早いみたい.html"
 },
+  {
+  id:15,
+  year:2026 ,
+  title: "私が手話にハマる理由",
+  date: "2026/8/16",
+  contentFile: "./posts/私が手話にハマる理由.html"
+},
 ];

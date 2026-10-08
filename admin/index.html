@@ -6,8 +6,11 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Ayappi Studio</title>
 <link rel="icon" type="image/jpeg" href="../icon.jpeg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700&display=swap">
 <style>
-:root { --bg: #ffffff; --surface-paper: #f7f6f2; --surface-sunken: #efeee8; --ink: #111111; --ink-soft: #545454; --muted: #51624f; --line: #e2e2de; --input-border: #d8d8d4; --input-focus: #bcbcb6; --placeholder: #c7c7c2; --frog: #8e8a4e; --on-frog: #111111; --frog-belly: #ece6d6; --stump: #574e3d; --toe: #be9673; --paper: #d3d3c9; --success: #2f6a3c; --success-bg: #e3efe2; --danger: #a2391f; --danger-bg: #f7e4dd; --diff-add: #dcebd5; --diff-del: #f3dcd5; --focus-ring: #51624f; --scrim: rgba(17,17,17,.32); --shadow-panel: 0 1px 2px rgba(17,17,17,.06); --shadow-float: 0 12px 32px rgba(17,17,17,.14); --radius-sm: 6px; --radius-input: 12px; --radius-panel: 16px; --radius-pill: 999px; --font-sans: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace; color-scheme: light; }
+:root { --bg: #ffffff; --surface-paper: #f7f6f2; --surface-sunken: #efeee8; --ink: #111111; --ink-soft: #545454; --muted: #51624f; --line: #e2e2de; --input-border: #d8d8d4; --input-focus: #bcbcb6; --placeholder: #c7c7c2; --frog: #8e8a4e; --on-frog: #111111; --frog-belly: #ece6d6; --stump: #574e3d; --toe: #be9673; --paper: #d3d3c9; --success: #2f6a3c; --success-bg: #e3efe2; --danger: #a2391f; --danger-bg: #f7e4dd; --diff-add: #dcebd5; --diff-del: #f3dcd5; --focus-ring: #51624f; --scrim: rgba(17,17,17,.32); --shadow-panel: 0 1px 2px rgba(17,17,17,.06); --shadow-float: 0 12px 32px rgba(17,17,17,.14); --radius-sm: 6px; --radius-input: 12px; --radius-panel: 16px; --radius-pill: 999px; --font-sans: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "Hiragino Maru Gothic Pro", sans-serif; --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace; color-scheme: light; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161714; --surface-paper: #1d1e1a; --surface-sunken: #252620; --ink: #f1efe8; --ink-soft: #b9b7af; --muted: #a9b8a5; --line: #34352f; --input-border: #45463f; --input-focus: #6a6b63; --placeholder: #5d5e57; --frog: #a6a262; --frog-belly: #2c2a22; --stump: #cbbd9f; --paper: #2a2b26; --success: #8fcf98; --success-bg: #1f3323; --danger: #f39a7c; --danger-bg: #3a221b; --diff-add: #24361f; --diff-del: #3d241e; --focus-ring: #c6d4c2; --scrim: rgba(0,0,0,.55); --shadow-panel: 0 1px 2px rgba(0,0,0,.4); --shadow-float: 0 12px 32px rgba(0,0,0,.5); color-scheme: dark; } }
 :root[data-theme="dark"] { --bg: #161714; --surface-paper: #1d1e1a; --surface-sunken: #252620; --ink: #f1efe8; --ink-soft: #b9b7af; --muted: #a9b8a5; --line: #34352f; --input-border: #45463f; --input-focus: #6a6b63; --placeholder: #5d5e57; --frog: #a6a262; --frog-belly: #2c2a22; --stump: #cbbd9f; --paper: #2a2b26; --success: #8fcf98; --success-bg: #1f3323; --danger: #f39a7c; --danger-bg: #3a221b; --diff-add: #24361f; --diff-del: #3d241e; --focus-ring: #c6d4c2; --scrim: rgba(0,0,0,.55); --shadow-panel: 0 1px 2px rgba(0,0,0,.4); --shadow-float: 0 12px 32px rgba(0,0,0,.5); color-scheme: dark; }
 
@@ -16,7 +19,7 @@ html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 13px/1.6 var(--font-sans); overflow: hidden; }
 button, input, textarea, select { font-family: inherit; }
 .hidden { display: none !important; }
-.mobile-only { display: none; }
+.mobile-only { display: none !important; }
 
 /* lock screen */
 .lock { display: none; position: fixed; inset: 0; z-index: 100; background: var(--surface-paper); place-items: center; padding: 16px; overflow: auto; }
@@ -271,7 +274,7 @@ body.locked .dash { display: none; }
   .top { height: auto; padding: 10px 16px; flex-wrap: wrap; }
   .v-write { grid-template-columns: 1fr; }
   /* スマホでは「下書き一覧」と「編集画面」を切り替えて表示 */
-  .mobile-only { display: inline-flex; }
+  .mobile-only { display: inline-flex !important; }
   .v-write .drafts { display: none; border-right: 0; }
   .v-write.show-list .drafts { display: flex; min-height: calc(100vh - 160px); }
   .v-write.show-list .editor-wrap { display: none; }
@@ -310,7 +313,7 @@ body.locked .dash { display: none; }
   <aside class="rail">
     <div class="brand">
       <img src="../icon.jpeg" alt="">
-      <div><b>Ayappi Studio</b><span>Ayappi Blog の投稿ダッシュボード</span></div>
+      <div><b>Ayappi Studio</b></div>
     </div>
     <nav class="nav" aria-label="メニュー">
       <button data-nav="write" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>執筆・下書き<span class="count" id="draftCount">0</span></button>

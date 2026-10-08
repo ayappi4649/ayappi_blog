@@ -385,7 +385,6 @@
     if (n === 4) openPublish();
   }
   $$(".step").forEach(function (s) { s.addEventListener("click", function () { go(+s.dataset.step); }); });
-  $("#toProof").addEventListener("click", function () { go(2); });
   $("#closeAi").addEventListener("click", function () { go(1); });
   $("#toPreview").addEventListener("click", function () { go(3); });
   $("#backEdit").addEventListener("click", function () { go(1); });
@@ -440,6 +439,17 @@
     t.remove();
     return ok ? Promise.resolve() : Promise.reject(new Error("コピーできませんでした"));
   }
+  /* タイトルと本文をそのままコピー */
+  var copyAllT;
+  $("#copyAll").addEventListener("click", function () {
+    var btn = this, label = btn.querySelector("span"), text = plainText();
+    if (!text) { toast({ error: true, title: "本文が空です" }); return; }
+    var t = title.value.trim();
+    copyToClipboard((t ? t + "\n\n" : "") + text).then(function () {
+      btn.classList.add("is-done"); label.textContent = "コピーしました";
+      clearTimeout(copyAllT); copyAllT = setTimeout(function () { btn.classList.remove("is-done"); label.textContent = "全文コピー"; }, 2000);
+    }).catch(function (e) { toast({ error: true, title: e.message, msg: "ブラウザのクリップボード権限を確認してください" }); });
+  });
   var copyT;
   $("#copyPrompt").addEventListener("click", function () {
     var btn = this, label = btn.querySelector("span");

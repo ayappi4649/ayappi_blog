@@ -40,6 +40,16 @@
     return crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, key, unb64(box.data)).then(function (pt) { return new TextDecoder().decode(pt); });
   }
   function lockData() { return lsGet("studio.lock", null); }
+  /* 初期パスコード（まだこの端末で設定していないとき用）。コードには平文を置かず、ハッシュだけを持つ */
+  var INITIAL_SALT = "ayappi-studio-initial-passcode";
+  var INITIAL_HASH = "70a95d8d3ed7fa6cc2eeabd2a4063422a6a1a83eb0bf421b55d9e84db7cdf8f9";
+  function isInitialPasscode(pass) {
+    return crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveBits"]).then(function (base) {
+      return crypto.subtle.deriveBits({ name: "PBKDF2", salt: new TextEncoder().encode(INITIAL_SALT), iterations: 310000, hash: "SHA-256" }, base, 256);
+    }).then(function (bits) {
+      return Array.prototype.map.call(new Uint8Array(bits), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("") === INITIAL_HASH;
+    });
+  }
   function setPasscode(pass, token) {
     var salt = crypto.getRandomValues(new Uint8Array(16));
     return deriveKey(pass, salt).then(function (key) {
@@ -1067,17 +1077,10 @@
   setGh(false);
   /* ── ロック画面 ───────────────────────────── */
   var started = false, idleT = null, lastAct = Date.now(), fails = 0, waitUntil = 0;
-  function showLock(mode) {
-    var setup = mode === "setup";
+  function showLock() {
     document.body.classList.add("locked");
-    $("#lockTitle").textContent = setup ? "パスコードを設定" : "パスコードを入力";
-    $("#lockSub").textContent = setup ? "この端末で Ayappi Studio を開くときのパスコードです（4文字以上）。GitHub のトークンはこのパスコードで暗号化して保存します。" : "Ayappi Studio はロックされています。";
-    $("#lockPass2Wrap").classList.toggle("hidden", !setup);
-    $("#lockForgot").classList.toggle("hidden", setup);
-    $("#lockGo").textContent = setup ? "設定して開く" : "開く";
     $("#lockErr").textContent = "";
-    $("#lockPass").value = ""; $("#lockPass2").value = "";
-    $("#lockForm").dataset.mode = mode;
+    $("#lockPass").value = "";
     setTimeout(function () { $("#lockPass").focus(); }, 50);
   }
   function lockNow() {
@@ -1085,7 +1088,7 @@
     flush();
     S.ghToken = ""; lockKey = null; draftsT = null;
     $("#scrim").classList.remove("open");
-    showLock("unlock");
+    showLock();
   }
   function unlocked(token) {
     S.ghToken = token || ""; fails = 0;
@@ -1097,28 +1100,28 @@
   }
   $("#lockForm").addEventListener("submit", function (e) {
     e.preventDefault();
-    var mode = this.dataset.mode, p1 = $("#lockPass").value, err = $("#lockErr"), btn = $("#lockGo");
+    var p1 = $("#lockPass").value, err = $("#lockErr"), btn = $("#lockGo");
     if (Date.now() < waitUntil) { err.textContent = "何度も間違えたため、" + Math.ceil((waitUntil - Date.now()) / 1000) + " 秒待ってください"; return; }
-    if (mode === "setup") {
-      if (p1.length < 4) { err.textContent = "4文字以上にしてください"; return; }
-      if (p1 !== $("#lockPass2").value) { err.textContent = "確認用のパスコードが一致しません"; return; }
-      btn.disabled = true;
-      setPasscode(p1, legacyToken).then(function () {
-        var t = legacyToken; legacyToken = ""; saveSettings(); unlocked(t);
-      }).catch(function (e2) { err.textContent = "設定できませんでした：" + e2.message; }).then(function () { btn.disabled = false; });
-      return;
-    }
+    if (!p1) { err.textContent = "パスコードを入力してください"; return; }
     btn.disabled = true; err.textContent = "";
-    unlockWith(p1).then(unlocked).catch(function (e2) {
+    var opening = lockData()
+      ? unlockWith(p1)
+      /* この端末では初めて：初期パスコードと一致したら、それで暗号化の準備をする */
+      : isInitialPasscode(p1).then(function (ok) {
+          if (!ok) throw new Error("パスコードが違います");
+          return setPasscode(p1, legacyToken).then(function () { var t = legacyToken; legacyToken = ""; saveSettings(); return t; });
+        });
+    opening.then(unlocked).catch(function (e2) {
       fails++;
       if (fails >= 5) { waitUntil = Date.now() + 30000; fails = 0; }
       err.textContent = e2.message; $("#lockPass").select();
     }).then(function () { btn.disabled = false; });
   });
   $("#lockForgot").addEventListener("click", function () {
-    if (!confirm("パスコードをリセットしますか？\n\n保存してある GitHub のトークンは消えるので、新しいパスコードを設定したあと、設定画面でトークンを入れ直してください。\n（GitHub に保存した下書きや公開済みの記事は消えません）")) return;
-    localStorage.removeItem("studio.lock"); legacyToken = "";
-    showLock("setup");
+    if (!confirm("パスコードを初期のものに戻しますか？\n\nこの端末に保存してある GitHub のトークンは消えるので、開いたあと設定画面でトークンを入れ直してください。\n（GitHub に保存した下書きや公開済みの記事は消えません）")) return;
+    try { localStorage.removeItem("studio.lock"); } catch (e) { /* noop */ }
+    legacyToken = "";
+    showLock();
   });
   $("#lockBtn").addEventListener("click", lockNow);
   /* 何も操作しない時間が続いたら自動でロック */
@@ -1159,7 +1162,7 @@
     $("#lockTitle").textContent = "このブラウザでは開けません";
     $("#lockSub").textContent = "パスコードの暗号化に必要な機能が使えません。https の URL から開くか、最新の Chrome / Safari で開いてください。";
     $("#lockForm").classList.add("hidden");
-  } else showLock(lockData() ? "unlock" : "setup");
+  } else showLock();
   setInterval(renderList, 30000);
   /* 動作確認用 */
   window.__studio = { toSiteHtml: toSiteHtml, fromSiteHtml: fromSiteHtml, body: body };

@@ -296,13 +296,12 @@ body.locked .dash { display: none; }
   <div class="lock__card">
     <img src="../icon.jpeg" alt="">
     <h1 id="lockTitle">パスコードを入力</h1>
-    <p id="lockSub"></p>
+    <p id="lockSub">Ayappi Studio はロックされています。</p>
     <form id="lockForm" autocomplete="off">
       <input class="input" type="password" id="lockPass" aria-label="パスコード" placeholder="パスコード" autocomplete="current-password">
-      <div id="lockPass2Wrap"><input class="input" type="password" id="lockPass2" aria-label="パスコード（確認）" placeholder="もう一度入力" autocomplete="new-password"></div>
       <div class="lock__err" id="lockErr" aria-live="polite"></div>
       <button class="btn btn--primary" id="lockGo" type="submit">開く</button>
-      <button class="lock__forgot" id="lockForgot" type="button">パスコードを忘れた</button>
+      <button class="lock__forgot" id="lockForgot" type="button">パスコードを忘れた（初期に戻す）</button>
     </form>
   </div>
 </div>

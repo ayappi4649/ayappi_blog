@@ -11,12 +11,58 @@
   /* ── 設定 ─────────────────────────────── */
   var DEFAULTS = {
     owner: "ayappi4649", repo: "ayappi_blog", branch: "main", ghToken: "", draftsRepo: "ayappi_blog_drafts",
-    siteUrl: "https://ayappi4649.github.io/ayappi_blog/"
+    siteUrl: "https://ayappi4649.github.io/ayappi_blog/", lockMinutes: 30
   };
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 保存できなくても動作は続ける */ } }
   var S = Object.assign({}, DEFAULTS, lsGet("studio.settings", {}));
-  if (S.claudeKey || S.openaiKey) { ["provider", "claudeKey", "claudeModel", "openaiKey", "openaiModel"].forEach(function (k) { delete S[k]; }); lsSet("studio.settings", S); } /* 以前の版で保存した API キーは消す */
+  if (S.claudeKey || S.openaiKey) { ["provider", "claudeKey", "claudeModel", "openaiKey", "openaiModel"].forEach(function (k) { delete S[k]; }); } /* 以前の版で保存した API キーは消す */
+  /* 以前の版で平文保存していたトークン。パスコード設定時に暗号化して消す */
+  var legacyToken = S.ghToken || "";
+  S.ghToken = "";
+  function saveSettings() { var c = Object.assign({}, S); delete c.ghToken; lsSet("studio.settings", c); }
+
+  /* ── パスコード（トークンをパスコードで暗号化して保存） ──
+     studio.lock = { salt, check: {iv,data}, token: {iv,data}|null } */
+  var lockKey = null;
+  function b64(buf) { var b = new Uint8Array(buf), s = ""; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
+  function unb64(t) { var s = atob(t), b = new Uint8Array(s.length); for (var i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
+  function deriveKey(pass, salt) {
+    return crypto.subtle.importKey("raw", new TextEncoder().encode(pass), "PBKDF2", false, ["deriveKey"]).then(function (base) {
+      return crypto.subtle.deriveKey({ name: "PBKDF2", salt: salt, iterations: 310000, hash: "SHA-256" }, base, { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    });
+  }
+  function encryptStr(key, text) {
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, new TextEncoder().encode(text)).then(function (ct) { return { iv: b64(iv), data: b64(ct) }; });
+  }
+  function decryptStr(key, box) {
+    return crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(box.iv) }, key, unb64(box.data)).then(function (pt) { return new TextDecoder().decode(pt); });
+  }
+  function lockData() { return lsGet("studio.lock", null); }
+  function setPasscode(pass, token) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    return deriveKey(pass, salt).then(function (key) {
+      return Promise.all([encryptStr(key, "ayappi-studio"), token ? encryptStr(key, token) : null]).then(function (r) {
+        lsSet("studio.lock", { salt: b64(salt), check: r[0], token: r[1] });
+        lockKey = key;
+      });
+    });
+  }
+  function unlockWith(pass) {
+    var L0 = lockData();
+    return deriveKey(pass, unb64(L0.salt)).then(function (key) {
+      return decryptStr(key, L0.check).then(function () {
+        lockKey = key;
+        return L0.token ? decryptStr(key, L0.token) : "";
+      }, function () { throw new Error("パスコードが違います"); });
+    });
+  }
+  function saveToken(token) {
+    var L0 = lockData();
+    if (!lockKey || !L0) return Promise.resolve();
+    return (token ? encryptStr(lockKey, token) : Promise.resolve(null)).then(function (box) { L0.token = box; lsSet("studio.lock", L0); });
+  }
   function siteBase() { var u = (S.siteUrl || "").trim(); if (!u) return new URL("../", location.href).href; return /\/$/.test(u) ? u : u + "/"; }
 
   /* ── 下書きの保存（IndexedDB。画像も含めて保存できる） ── */
@@ -972,10 +1018,10 @@
 
   /* ── 設定 ─────────────────────────────── */
   var form = $("#settingsForm");
-  function fillSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "draftsRepo"].forEach(function (k) { form.elements[k].value = S[k] || ""; }); }
-  function readSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "draftsRepo"].forEach(function (k) { S[k] = form.elements[k].value.trim(); }); draftsT = null; lsSet("studio.settings", S); }
+  function fillSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "draftsRepo"].forEach(function (k) { form.elements[k].value = S[k] || ""; }); form.elements.lockMinutes.value = String(S.lockMinutes || 0); }
+  function readSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "draftsRepo"].forEach(function (k) { S[k] = form.elements[k].value.trim(); }); S.lockMinutes = Number(form.elements.lockMinutes.value) || 0; draftsT = null; saveSettings(); saveToken(S.ghToken); }
   form.addEventListener("submit", function (e) {
-    e.preventDefault(); readSettings(); pub.list = null;
+    e.preventDefault(); readSettings(); armIdle(); pub.list = null;
     toast({ title: "設定を保存しました" }); loadPublished().then(testBadge); syncDrafts();
   });
   function testBadge() {
@@ -1019,6 +1065,86 @@
 
   /* ── 起動 ─────────────────────────────── */
   setGh(false);
+  /* ── ロック画面 ───────────────────────────── */
+  var started = false, idleT = null, lastAct = Date.now(), fails = 0, waitUntil = 0;
+  function showLock(mode) {
+    var setup = mode === "setup";
+    document.body.classList.add("locked");
+    $("#lockTitle").textContent = setup ? "パスコードを設定" : "パスコードを入力";
+    $("#lockSub").textContent = setup ? "この端末で Ayappi Studio を開くときのパスコードです（4文字以上）。GitHub のトークンはこのパスコードで暗号化して保存します。" : "Ayappi Studio はロックされています。";
+    $("#lockPass2Wrap").classList.toggle("hidden", !setup);
+    $("#lockForgot").classList.toggle("hidden", setup);
+    $("#lockGo").textContent = setup ? "設定して開く" : "開く";
+    $("#lockErr").textContent = "";
+    $("#lockPass").value = ""; $("#lockPass2").value = "";
+    $("#lockForm").dataset.mode = mode;
+    setTimeout(function () { $("#lockPass").focus(); }, 50);
+  }
+  function lockNow() {
+    if (document.body.classList.contains("locked")) return;
+    flush();
+    S.ghToken = ""; lockKey = null; draftsT = null;
+    $("#scrim").classList.remove("open");
+    showLock("unlock");
+  }
+  function unlocked(token) {
+    S.ghToken = token || ""; fails = 0;
+    document.body.classList.remove("locked");
+    lastAct = Date.now(); armIdle();
+    if (!started) { started = true; start(); }
+    else if (S.ghToken) { pub.list = null; loadPublished(); syncDrafts(); }
+    else { setGh(false); show("settings"); toast({ title: "GitHub のトークンを入れ直してください", msg: "パスコードをリセットしたため、トークンが消えています。", ttl: 8000 }); }
+  }
+  $("#lockForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var mode = this.dataset.mode, p1 = $("#lockPass").value, err = $("#lockErr"), btn = $("#lockGo");
+    if (Date.now() < waitUntil) { err.textContent = "何度も間違えたため、" + Math.ceil((waitUntil - Date.now()) / 1000) + " 秒待ってください"; return; }
+    if (mode === "setup") {
+      if (p1.length < 4) { err.textContent = "4文字以上にしてください"; return; }
+      if (p1 !== $("#lockPass2").value) { err.textContent = "確認用のパスコードが一致しません"; return; }
+      btn.disabled = true;
+      setPasscode(p1, legacyToken).then(function () {
+        var t = legacyToken; legacyToken = ""; saveSettings(); unlocked(t);
+      }).catch(function (e2) { err.textContent = "設定できませんでした：" + e2.message; }).then(function () { btn.disabled = false; });
+      return;
+    }
+    btn.disabled = true; err.textContent = "";
+    unlockWith(p1).then(unlocked).catch(function (e2) {
+      fails++;
+      if (fails >= 5) { waitUntil = Date.now() + 30000; fails = 0; }
+      err.textContent = e2.message; $("#lockPass").select();
+    }).then(function () { btn.disabled = false; });
+  });
+  $("#lockForgot").addEventListener("click", function () {
+    if (!confirm("パスコードをリセットしますか？\n\n保存してある GitHub のトークンは消えるので、新しいパスコードを設定したあと、設定画面でトークンを入れ直してください。\n（GitHub に保存した下書きや公開済みの記事は消えません）")) return;
+    localStorage.removeItem("studio.lock"); legacyToken = "";
+    showLock("setup");
+  });
+  $("#lockBtn").addEventListener("click", lockNow);
+  /* 何も操作しない時間が続いたら自動でロック */
+  function armIdle() {
+    clearInterval(idleT);
+    if (!S.lockMinutes) return;
+    idleT = setInterval(function () { if (Date.now() - lastAct > S.lockMinutes * 60000) lockNow(); }, 15000);
+  }
+  ["pointerdown", "keydown", "scroll", "touchstart"].forEach(function (ev) { document.addEventListener(ev, function () { lastAct = Date.now(); }, { passive: true, capture: true }); });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible" && S.lockMinutes && Date.now() - lastAct > S.lockMinutes * 60000) lockNow();
+  });
+
+  /* パスコード変更 */
+  $("#changePass").addEventListener("click", function () {
+    var cur0 = $("#passCur").value, n1 = $("#passNew").value, n2 = $("#passNew2").value, msg = $("#passMsg");
+    msg.className = "help";
+    if (n1.length < 4) { msg.textContent = "新しいパスコードは4文字以上にしてください"; msg.classList.add("bad"); return; }
+    if (n1 !== n2) { msg.textContent = "確認用のパスコードが一致しません"; msg.classList.add("bad"); return; }
+    unlockWith(cur0).then(function (token) { return setPasscode(n1, token || S.ghToken); }).then(function () {
+      $("#passCur").value = $("#passNew").value = $("#passNew2").value = "";
+      msg.textContent = "パスコードを変更しました";
+    }).catch(function (e) { msg.textContent = e.message; msg.classList.add("bad"); });
+  });
+
+  function start() {
   store.all().then(function (all) {
     drafts = all || [];
     if (!drafts.length) { var d = blankDraft(); drafts.push(d); store.put(d); }
@@ -1027,6 +1153,13 @@
     if (!S.ghToken) { show("settings"); setSync("GitHub に接続すると、どの端末からでも下書きを開けます"); toast({ title: "はじめに設定をしてください", msg: "GitHub のトークンを入れると使えるようになります。", ttl: 8000 }); }
     else { loadPublished(); syncDrafts(); }
   });
+  }
+  if (!window.crypto || !crypto.subtle) {
+    document.body.classList.add("locked");
+    $("#lockTitle").textContent = "このブラウザでは開けません";
+    $("#lockSub").textContent = "パスコードの暗号化に必要な機能が使えません。https の URL から開くか、最新の Chrome / Safari で開いてください。";
+    $("#lockForm").classList.add("hidden");
+  } else showLock(lockData() ? "unlock" : "setup");
   setInterval(renderList, 30000);
   /* 動作確認用 */
   window.__studio = { toSiteHtml: toSiteHtml, fromSiteHtml: fromSiteHtml, body: body };

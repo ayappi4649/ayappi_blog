@@ -18,6 +18,20 @@ button, input, textarea, select { font-family: inherit; }
 .hidden { display: none !important; }
 .mobile-only { display: none; }
 
+/* lock screen */
+.lock { display: none; position: fixed; inset: 0; z-index: 100; background: var(--surface-paper); place-items: center; padding: 16px; overflow: auto; }
+body.locked .lock { display: grid; }
+body.locked .dash { display: none; }
+.lock__card { width: 380px; max-width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-float); padding: 28px 24px 22px; text-align: center; }
+.lock__card img { width: 56px; height: 56px; border-radius: 14px; object-fit: cover; background: var(--paper); }
+.lock__card h1 { margin: 14px 0 6px; font-size: 18px; letter-spacing: -.02em; }
+.lock__card p { margin: 0 0 18px; font-size: 12.5px; color: var(--ink-soft); line-height: 1.7; }
+.lock__card form { display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.lock__card .input { text-align: center; font-size: 16px; letter-spacing: .2em; }
+.lock__err { min-height: 18px; font-size: 12.5px; color: var(--danger); text-align: center; }
+.lock__forgot { margin-top: 6px; border: 0; background: none; color: var(--muted); font: 700 12px var(--font-sans); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.help.bad { color: var(--danger); }
+
 /* components */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: var(--radius-input); border: 1px solid var(--input-border); background: var(--bg); color: var(--ink); font: 700 13px/1.2 var(--font-sans); cursor: pointer; white-space: nowrap; text-decoration: none; }
 .btn:hover { border-color: var(--input-focus); background: var(--surface-paper); }
@@ -206,6 +220,7 @@ button, input, textarea, select { font-family: inherit; }
 .panel__body p.help code { font-family: var(--font-mono); }
 .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .grid3 { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 14px; }
+.grid3--eq { grid-template-columns: 1fr 1fr 1fr; }
 .plist { list-style: none; margin: 0; padding: 0; }
 .prow { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line); }
 .prow:first-child { border-top: 0; }
@@ -277,6 +292,20 @@ button, input, textarea, select { font-family: inherit; }
 </style>
 </head>
 <body>
+<div class="lock" id="lock" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+  <div class="lock__card">
+    <img src="../icon.jpeg" alt="">
+    <h1 id="lockTitle">パスコードを入力</h1>
+    <p id="lockSub"></p>
+    <form id="lockForm" autocomplete="off">
+      <input class="input" type="password" id="lockPass" aria-label="パスコード" placeholder="パスコード" autocomplete="current-password">
+      <div id="lockPass2Wrap"><input class="input" type="password" id="lockPass2" aria-label="パスコード（確認）" placeholder="もう一度入力" autocomplete="new-password"></div>
+      <div class="lock__err" id="lockErr" aria-live="polite"></div>
+      <button class="btn btn--primary" id="lockGo" type="submit">開く</button>
+      <button class="lock__forgot" id="lockForgot" type="button">パスコードを忘れた</button>
+    </form>
+  </div>
+</div>
 <div class="dash" id="app">
   <!-- Rail -->
   <aside class="rail">
@@ -289,6 +318,7 @@ button, input, textarea, select { font-family: inherit; }
       <button data-nav="published"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>公開済み<span class="count" id="liveCount">–</span></button>
       <button data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>設定</button>
     </nav>
+    <button class="btn btn--ghost btn--sm" id="lockBtn" style="align-self:flex-start"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>ロック</button>
     <div class="gh">
       <div class="gh__row">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.56 9.56 0 015 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0012 2z"/></svg>
@@ -439,6 +469,27 @@ button, input, textarea, select { font-family: inherit; }
             <label><span class="label">下書き用リポジトリ（非公開） <span class="badge" id="draftsTest" style="margin-left:6px;text-transform:none;letter-spacing:0">未確認</span></span><input class="input" name="draftsRepo" placeholder="ayappi_blog_drafts"></label>
             <p class="help">「Draft保存」した下書きをここに保存します。オーナーは上と同じです。トークンにこのリポジトリへの権限も付けてください。</p>
             <label><span class="label">サイトの URL</span><input class="input" name="siteUrl" placeholder="https://ayappi4649.github.io/ayappi_blog/"></label>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__head"><h3 class="title">パスコード</h3></div>
+          <div class="panel__body">
+            <label><span class="label">自動ロック</span>
+              <select class="select" name="lockMinutes">
+                <option value="5">5分 操作がなければロック</option>
+                <option value="15">15分 操作がなければロック</option>
+                <option value="30">30分 操作がなければロック</option>
+                <option value="60">1時間 操作がなければロック</option>
+                <option value="0">自動ではロックしない</option>
+              </select>
+            </label>
+            <div class="grid3 grid3--eq">
+              <label><span class="label">今のパスコード</span><input class="input" type="password" id="passCur" autocomplete="current-password"></label>
+              <label><span class="label">新しいパスコード</span><input class="input" type="password" id="passNew" autocomplete="new-password"></label>
+              <label><span class="label">もう一度</span><input class="input" type="password" id="passNew2" autocomplete="new-password"></label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><button type="button" class="btn btn--sm" id="changePass">パスコードを変更</button><p class="help" id="passMsg" style="margin:0"></p></div>
+            <p class="help">パスコードは端末（ブラウザ）ごとに設定します。GitHub のトークンはこのパスコードで暗号化して保存しています。</p>
           </div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">

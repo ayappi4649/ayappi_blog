@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Ayappi Studio</title>
+<link rel="icon" type="image/jpeg" href="../icon.jpeg">
+<style>
+:root { --bg: #ffffff; --surface-paper: #f7f6f2; --surface-sunken: #efeee8; --ink: #111111; --ink-soft: #545454; --muted: #51624f; --line: #e2e2de; --input-border: #d8d8d4; --input-focus: #bcbcb6; --placeholder: #c7c7c2; --frog: #8e8a4e; --on-frog: #111111; --frog-belly: #ece6d6; --stump: #574e3d; --toe: #be9673; --paper: #d3d3c9; --success: #2f6a3c; --success-bg: #e3efe2; --danger: #a2391f; --danger-bg: #f7e4dd; --diff-add: #dcebd5; --diff-del: #f3dcd5; --focus-ring: #51624f; --scrim: rgba(17,17,17,.32); --shadow-panel: 0 1px 2px rgba(17,17,17,.06); --shadow-float: 0 12px 32px rgba(17,17,17,.14); --radius-sm: 6px; --radius-input: 12px; --radius-panel: 16px; --radius-pill: 999px; --font-sans: Arial, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif; --font-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #161714; --surface-paper: #1d1e1a; --surface-sunken: #252620; --ink: #f1efe8; --ink-soft: #b9b7af; --muted: #a9b8a5; --line: #34352f; --input-border: #45463f; --input-focus: #6a6b63; --placeholder: #5d5e57; --frog: #a6a262; --frog-belly: #2c2a22; --stump: #cbbd9f; --paper: #2a2b26; --success: #8fcf98; --success-bg: #1f3323; --danger: #f39a7c; --danger-bg: #3a221b; --diff-add: #24361f; --diff-del: #3d241e; --focus-ring: #c6d4c2; --scrim: rgba(0,0,0,.55); --shadow-panel: 0 1px 2px rgba(0,0,0,.4); --shadow-float: 0 12px 32px rgba(0,0,0,.5); color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #161714; --surface-paper: #1d1e1a; --surface-sunken: #252620; --ink: #f1efe8; --ink-soft: #b9b7af; --muted: #a9b8a5; --line: #34352f; --input-border: #45463f; --input-focus: #6a6b63; --placeholder: #5d5e57; --frog: #a6a262; --frog-belly: #2c2a22; --stump: #cbbd9f; --paper: #2a2b26; --success: #8fcf98; --success-bg: #1f3323; --danger: #f39a7c; --danger-bg: #3a221b; --diff-add: #24361f; --diff-del: #3d241e; --focus-ring: #c6d4c2; --scrim: rgba(0,0,0,.55); --shadow-panel: 0 1px 2px rgba(0,0,0,.4); --shadow-float: 0 12px 32px rgba(0,0,0,.5); color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 13px/1.6 var(--font-sans); overflow: hidden; }
+button, input, textarea, select { font-family: inherit; }
+.hidden { display: none !important; }
+
+/* components */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: var(--radius-input); border: 1px solid var(--input-border); background: var(--bg); color: var(--ink); font: 700 13px/1.2 var(--font-sans); cursor: pointer; white-space: nowrap; text-decoration: none; }
+.btn:hover { border-color: var(--input-focus); background: var(--surface-paper); }
+.btn:focus-visible, .tool:focus-visible, .nav button:focus-visible, .chip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.btn--primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn--primary:hover { background: var(--ink); opacity: .86; }
+.btn--frog { background: var(--frog); color: var(--on-frog); border-color: var(--frog); }
+.btn--frog:hover { background: var(--frog); filter: brightness(1.06); }
+.btn--ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn--ghost:hover { background: var(--surface-sunken); border-color: transparent; }
+.btn--danger { background: var(--danger); border-color: var(--danger); color: var(--bg); }
+.btn--sm { height: 30px; padding: 0 10px; border-radius: var(--radius-sm); font-size: 12px; }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+.btn svg { width: 16px; height: 16px; flex: none; }
+.input, .textarea, .select { width: 100%; border: 1px solid var(--input-border); border-radius: var(--radius-input); background: var(--surface-sunken); color: var(--ink); font: 700 13px/1.5 var(--font-sans); outline: none; }
+.input, .select { height: 40px; padding: 0 14px; }
+.textarea { padding: 12px 14px; font-weight: 400; resize: vertical; }
+.input:focus, .textarea:focus, .select:focus { border-color: var(--input-focus); box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--focus-ring); }
+.input::placeholder, .textarea::placeholder { color: var(--placeholder); }
+.label { display: block; font: 700 11px/1.4 var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.title { margin: 0; font: 700 14px/1.4 var(--font-sans); letter-spacing: -.01em; }
+.badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-radius: var(--radius-pill); font: 700 11px/1 var(--font-sans); background: var(--surface-sunken); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badge--draft::before { background: var(--toe); }
+.badge--proof { background: var(--frog-belly); color: var(--ink); }
+.badge--proof::before { background: var(--frog); }
+.badge--live { background: var(--success-bg); color: var(--success); border-color: transparent; }
+.badge--off { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
+.toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: var(--radius-input); background: var(--bg); }
+.tool { min-width: 32px; height: 32px; padding: 0 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink); font: 700 13px/1 var(--font-sans); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.tool:hover { background: var(--surface-sunken); }
+.tool[aria-pressed="true"] { background: var(--frog-belly); }
+.tool svg { width: 16px; height: 16px; }
+.tool-sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
+.seg { display: inline-flex; padding: 3px; gap: 3px; background: var(--surface-sunken); border-radius: var(--radius-input); border: 1px solid var(--line); }
+.seg button { height: 32px; padding: 0 14px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: 700 13px/1 var(--font-sans); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--bg); color: var(--ink); box-shadow: var(--shadow-panel); }
+.chip { height: 28px; padding: 0 11px; border-radius: var(--radius-pill); border: 1px solid var(--input-border); background: var(--bg); color: var(--ink); font: 700 12px/1 var(--font-sans); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--frog-belly); border-color: var(--frog); }
+.toast { display: flex; gap: 12px; align-items: flex-start; width: 380px; max-width: calc(100vw - 32px); padding: 14px 16px; border-radius: var(--radius-panel); background: var(--success-bg); color: var(--ink); box-shadow: var(--shadow-float); animation: tin .3s ease; }
+.toast--error { background: var(--danger-bg); }
+.toast__title { font-weight: 700; font-size: 14px; }
+.toast__meta { font: 12.5px/1.6 var(--font-mono); color: var(--ink-soft); word-break: break-all; }
+.toast a { color: var(--ink); font-weight: 700; text-underline-offset: 3px; }
+@keyframes tin { from { transform: translateY(12px); opacity: 0; } }
+.diff-add { background: var(--diff-add); border-radius: 3px; padding: 0 2px; }
+.diff-del { background: var(--diff-del); border-radius: 3px; padding: 0 2px; text-decoration: line-through; }
+
+/* layout */
+.dash { display: grid; grid-template-columns: 232px minmax(0, 1fr); height: 100%; position: relative; }
+.rail { display: flex; flex-direction: column; gap: 20px; padding: 22px 16px 18px; border-right: 1px solid var(--line); background: var(--surface-paper); overflow: auto; }
+.brand { display: flex; align-items: center; gap: 10px; padding: 0 6px; }
+.brand img { width: 38px; height: 38px; border-radius: 10px; object-fit: cover; background: var(--paper); }
+.brand b { display: block; font-size: 15px; letter-spacing: -.02em; }
+.brand span { display: block; font-size: 11px; color: var(--muted); }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav button { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font: 700 13px/1 var(--font-sans); cursor: pointer; text-align: left; }
+.nav button:hover { background: var(--surface-sunken); }
+.nav button[aria-current="page"] { background: var(--bg); color: var(--ink); box-shadow: var(--shadow-panel); }
+.nav button svg { width: 17px; height: 17px; flex: none; }
+.nav .count { margin-left: auto; font-size: 11px; }
+.gh { margin-top: auto; padding: 14px; border-radius: var(--radius-panel); background: var(--bg); border: 1px solid var(--line); }
+.gh__row { display: flex; align-items: center; gap: 8px; }
+.gh__row svg { width: 18px; height: 18px; color: var(--stump); }
+.gh__repo { margin-top: 10px; font: 700 12.5px/1.4 var(--font-mono); color: var(--stump); word-break: break-all; }
+.gh__meta { margin-top: 8px; font-size: 12px; color: var(--ink-soft); line-height: 1.7; }
+.gh__meta code { font: 12px var(--font-mono); color: var(--ink); }
+.gh__meta a { color: var(--ink-soft); }
+
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.top { display: flex; align-items: center; gap: 20px; height: 68px; padding: 0 24px; border-bottom: 1px solid var(--line); flex: none; }
+.steps { display: flex; align-items: center; gap: 6px; }
+.step { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 6px; border: 0; border-radius: var(--radius-pill); background: transparent; color: var(--muted); font: 700 13px/1 var(--font-sans); cursor: pointer; }
+.step:hover { background: var(--surface-sunken); }
+.step i { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--input-focus); font: 700 12px/1 var(--font-sans); font-style: normal; }
+.step[aria-current="step"] { background: var(--frog-belly); color: var(--ink); }
+.step[aria-current="step"] i { background: var(--frog); border-color: var(--frog); color: var(--on-frog); }
+.step.done i { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.step-line { width: 22px; height: 1px; background: var(--line); }
+.top__right { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.save { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+.save::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+.save.is-saving::before { background: var(--toe); }
+.page-title { font: 700 18px/1.3 var(--font-sans); letter-spacing: -.02em; margin: 0; }
+
+.view { flex: 1; min-height: 0; display: none; }
+.view.is-on { display: grid; }
+
+/* write */
+.v-write { grid-template-columns: 300px minmax(0, 1fr) 0; }
+.v-write.proof { grid-template-columns: 0 minmax(0, 1fr) 380px; }
+.drafts { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.v-write.proof .drafts { border: 0; }
+.drafts__head { display: flex; align-items: center; justify-content: space-between; padding: 18px 18px 12px; }
+.drafts__search { padding: 0 18px 12px; }
+.drafts__list { flex: 1; overflow: auto; padding: 0 10px 12px; }
+.ditem { position: relative; }
+.ditem + .ditem { margin-top: 2px; }
+.drow { display: block; width: 100%; text-align: left; padding: 12px 40px 12px 12px; border: 0; border-radius: 12px; background: transparent; color: var(--ink); cursor: pointer; }
+.drow:hover { background: var(--surface-paper); }
+.drow[aria-current="true"] { background: var(--frog-belly); }
+.drow__t { font-size: 14px; font-weight: 700; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.drow__m { margin-top: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+.drow__m .sp { margin-left: auto; }
+.ddel { position: absolute; top: 9px; right: 8px; width: 30px; height: 30px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; opacity: 0; }
+.ditem:hover .ddel, .ddel:focus-visible, .drow[aria-current="true"] + .ddel { opacity: 1; }
+.ddel:hover { background: var(--danger-bg); color: var(--danger); }
+.ddel svg { width: 16px; height: 16px; }
+.dconfirm { padding: 12px; border-radius: 12px; background: var(--danger-bg); border: 1px solid var(--danger); }
+.dconfirm p { margin: 0 0 4px; font-size: 13px; font-weight: 700; }
+.dconfirm small { display: block; font-size: 12px; color: var(--ink-soft); }
+.dconfirm div { display: flex; gap: 6px; margin-top: 10px; }
+.dempty { padding: 28px 12px; text-align: center; font-size: 13px; color: var(--ink-soft); line-height: 1.7; }
+.drafts__foot { border-top: 1px solid var(--line); padding: 12px 18px; font-size: 12px; color: var(--ink-soft); }
+
+.editor-wrap { min-width: 0; min-height: 0; overflow: auto; }
+.editor { max-width: 760px; margin: 0 auto; padding: 26px 40px 0; }
+.editing-note { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; color: var(--ink-soft); }
+.title-in { width: 100%; border: 0; outline: none; background: transparent; color: var(--ink); font: 700 30px/1.3 var(--font-sans); letter-spacing: -.02em; padding: 4px 0; }
+.title-in::placeholder { color: var(--placeholder); }
+.meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin: 10px 0 18px; font-size: 12px; color: var(--ink-soft); }
+.meta input { border: 1px solid var(--input-border); background: var(--surface-sunken); border-radius: 8px; height: 28px; padding: 0 8px; font: 700 12px var(--font-sans); color: var(--ink); }
+.meta .fname { font-family: var(--font-mono); color: var(--stump); width: 260px; }
+.meta .fname[readonly] { opacity: .75; }
+.sticky-tools { position: sticky; top: 0; z-index: 5; padding: 8px 0; background: var(--bg); }
+.colors { position: relative; }
+.pop { position: absolute; top: 38px; left: 0; display: none; gap: 6px; padding: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-float); z-index: 10; }
+.pop.open { display: flex; }
+.pop button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--bg); box-shadow: 0 0 0 1px var(--input-border); cursor: pointer; padding: 0; }
+.pop .bgopt { border-radius: 6px; font: 700 11px var(--font-sans); color: #111; }
+.body { margin-top: 18px; min-height: 420px; outline: none; font-size: 16px; line-height: 2; word-break: break-word; }
+.body p { margin: 0 0 14px; }
+.body h1 { font-size: 26px; line-height: 1.5; margin: 34px 0 10px; }
+.body h2 { font-size: 21px; line-height: 1.55; margin: 30px 0 10px; }
+.body h3 { font-size: 18px; line-height: 1.6; margin: 26px 0 8px; }
+.body h4 { font-size: 16px; margin: 22px 0 8px; }
+.body figure { margin: 28px 0 22px; }
+.body img { display: block; max-width: 100%; border-radius: 6px; }
+.body figure img { width: 100%; }
+.body figcaption { margin-top: 8px; font-size: 13px; line-height: 1.7; color: var(--ink-soft); text-align: center; outline: none; border-radius: 6px; padding: 2px 4px; }
+.body figcaption:empty::before { content: "キャプションを追加…"; color: var(--placeholder); }
+.body figure.sel img { outline: 2px solid var(--frog); outline-offset: 3px; }
+.body mark.hl { background: var(--frog-belly); color: inherit; box-shadow: 0 0 0 2px var(--frog); border-radius: 3px; }
+.body a { color: inherit; }
+.body iframe { max-width: 100%; }
+.body pre { background: var(--surface-sunken); padding: 12px; border-radius: 8px; overflow: auto; font-size: 13px; line-height: 1.6; }
+.body code { font-family: var(--font-mono); }
+.wc { font-size: 12px; color: var(--ink-soft); }
+.next-bar { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 10px; padding: 14px 0; background: linear-gradient(to top, var(--bg) 70%, transparent); }
+
+.ai { border-left: 1px solid var(--line); background: var(--surface-paper); display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden; }
+.ai__inner { width: 380px; display: flex; flex-direction: column; min-height: 0; height: 100%; }
+.ai__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.ai__body { flex: 1; overflow: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; }
+.ai__body > * { flex: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ai textarea { min-height: 120px; font-size: 13px; line-height: 1.7; }
+.sugg { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.sugg + .sugg { margin-top: 8px; }
+.sugg__k { font: 700 11px/1 var(--font-sans); letter-spacing: .04em; color: var(--muted); }
+.sugg__txt { margin: 8px 0; font-size: 13.5px; line-height: 1.9; word-break: break-word; }
+.sugg__why { font-size: 12px; color: var(--ink-soft); line-height: 1.6; }
+.sugg__act { display: flex; gap: 6px; margin-top: 10px; }
+.sugg.done { opacity: .55; }
+.sugg.done .sugg__act { display: none; }
+.ai__sum { font-size: 12.5px; line-height: 1.7; color: var(--ink-soft); }
+.ai__err { font-size: 12.5px; line-height: 1.7; color: var(--danger); background: var(--danger-bg); border-radius: 10px; padding: 10px 12px; word-break: break-word; }
+.skel { height: 64px; border-radius: 12px; background: linear-gradient(90deg, var(--surface-sunken), var(--bg), var(--surface-sunken)); background-size: 200% 100%; animation: sk 1.1s linear infinite; }
+.skel + .skel { margin-top: 8px; }
+@keyframes sk { to { background-position: -200% 0; } }
+
+/* preview */
+.v-prev { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
+.code-pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--surface-paper); }
+.pane-head { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 16px; border-bottom: 1px solid var(--line); flex: none; flex-wrap: wrap; }
+.pane-head .title { margin-right: auto; }
+.file-tabs { display: flex; gap: 2px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); flex: none; overflow-x: auto; }
+.file-tabs button { border: 0; background: transparent; padding: 8px 10px 9px; font: 12px var(--font-mono); color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+.file-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--frog); font-weight: 700; }
+.code { flex: 1; min-height: 0; overflow: auto; background: var(--surface-sunken); }
+.code textarea { display: block; width: 100%; min-height: 100%; border: 0; outline: none; resize: none; padding: 14px 16px; background: transparent; color: var(--ink); font: 12.5px/1.75 var(--font-mono); white-space: pre-wrap; word-break: break-all; overflow: hidden; tab-size: 2; }
+.changes { flex: none; border-top: 1px solid var(--line); padding: 12px 16px 14px; max-height: 180px; overflow: auto; }
+.changes ul { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.changes li { display: flex; align-items: center; gap: 8px; font: 12px/1.5 var(--font-mono); }
+.changes .tag { font: 700 10.5px/1 var(--font-sans); padding: 3px 6px; border-radius: 5px; color: var(--ink); }
+.tag.add { background: var(--diff-add); }
+.tag.mod { background: var(--frog-belly); }
+.tag.del { background: var(--diff-del); }
+.changes .n { margin-left: auto; color: var(--ink-soft); white-space: nowrap; }
+.live-pane { display: flex; flex-direction: column; min-height: 0; background: var(--surface-sunken); }
+.stage { flex: 1; overflow: auto; padding: 22px; display: flex; justify-content: center; }
+.browser { width: 100%; max-width: 980px; background: #fff; border-radius: 12px; border: 1px solid var(--line); box-shadow: var(--shadow-panel); overflow: hidden; align-self: flex-start; transition: max-width .25s; }
+.browser.mobile { max-width: 390px; }
+.chrome { display: flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-bottom: 1px solid #e2e2de; background: #f7f6f2; }
+.chrome i { width: 9px; height: 9px; border-radius: 50%; background: #d8d8d4; }
+.chrome .url { margin-left: 10px; flex: 1; height: 22px; border-radius: 6px; background: #fff; font: 11px/22px var(--font-mono); color: #545454; padding: 0 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.browser iframe { display: block; width: 100%; height: 900px; border: 0; background: #fff; }
+
+/* lists & forms (published / prompts / settings) */
+.v-page { overflow: auto; }
+.page-wrap { max-width: 920px; width: 100%; margin: 0 auto; padding: 28px 32px 60px; }
+.panel { background: var(--surface-paper); border: 1px solid var(--line); border-radius: var(--radius-panel); }
+.panel + .panel { margin-top: 18px; }
+.panel__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.panel__body { padding: 18px; display: flex; flex-direction: column; gap: 16px; }
+.panel__body p.help { margin: -8px 0 0; font-size: 12px; color: var(--ink-soft); line-height: 1.7; }
+.panel__body p.help code { font-family: var(--font-mono); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid3 { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 14px; }
+.plist { list-style: none; margin: 0; padding: 0; }
+.prow { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line); }
+.prow:first-child { border-top: 0; }
+.prow__id { font: 700 12px var(--font-mono); color: var(--muted); }
+.prow__t { font-weight: 700; font-size: 14px; line-height: 1.5; }
+.prow__m { font-size: 12px; color: var(--ink-soft); font-family: var(--font-mono); word-break: break-all; }
+.prow__a { display: flex; gap: 6px; }
+.prow .dconfirm { grid-column: 1 / -1; }
+.empty { padding: 36px 18px; text-align: center; color: var(--ink-soft); line-height: 1.8; }
+.preset { display: grid; grid-template-columns: 160px minmax(0, 1fr) 36px; gap: 10px; align-items: start; }
+.preset .textarea { min-height: 64px; }
+
+/* modal + toasts */
+.scrim { position: fixed; inset: 0; background: var(--scrim); display: none; place-items: center; z-index: 50; padding: 16px; }
+.scrim.open { display: grid; }
+.modal { width: 540px; max-width: 100%; background: var(--bg); border-radius: var(--radius-panel); box-shadow: var(--shadow-float); overflow: hidden; }
+.modal__head { padding: 20px 22px 6px; }
+.modal__head h2 { margin: 0; font-size: 18px; letter-spacing: -.02em; }
+.modal__head p { margin: 6px 0 0; font-size: 13px; color: var(--ink-soft); }
+.modal__body { padding: 14px 22px 4px; display: flex; flex-direction: column; gap: 14px; }
+.modal__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 16px 22px 20px; }
+.target { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--surface-paper); border: 1px solid var(--line); font: 12.5px var(--font-mono); color: var(--stump); word-break: break-all; }
+.target svg { width: 18px; height: 18px; flex: none; }
+.prog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.prog li { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.prog li .st { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--input-focus); flex: none; display: grid; place-items: center; }
+.prog li.run { color: var(--ink); font-weight: 700; }
+.prog li.run .st { border-color: var(--frog); border-top-color: transparent; animation: spin .8s linear infinite; }
+.prog li.ok { color: var(--ink); }
+.prog li.ok .st { background: var(--success); border-color: var(--success); }
+.prog li.ok .st::after { content: ""; width: 8px; height: 4px; border-left: 2px solid var(--bg); border-bottom: 2px solid var(--bg); transform: rotate(-45deg) translate(1px, -1px); }
+.prog li.ng { color: var(--danger); font-weight: 700; }
+.prog li.ng .st { background: var(--danger); border-color: var(--danger); }
+.prog code { font: 12px var(--font-mono); color: var(--stump); }
+.perr { font-size: 12.5px; color: var(--danger); background: var(--danger-bg); padding: 10px 12px; border-radius: 10px; word-break: break-word; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.toasts { position: fixed; right: 24px; top: 80px; display: flex; flex-direction: column; gap: 10px; z-index: 60; }
+
+@media (max-width: 1100px) {
+  .v-write { grid-template-columns: 240px minmax(0, 1fr) 0; }
+  .v-write.proof { grid-template-columns: 0 minmax(0, 1fr) 340px; }
+  .ai__inner { width: 340px; }
+  .v-prev { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .steps .step span { display: none; }
+}
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  .dash { grid-template-columns: 1fr; height: auto; min-height: 100%; }
+  .rail { flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; gap: 10px; }
+  .brand span, .gh { display: none; }
+  .nav { flex-direction: row; flex-wrap: wrap; }
+  .top { height: auto; padding: 10px 16px; flex-wrap: wrap; }
+  .v-write, .v-write.proof { grid-template-columns: 1fr; }
+  .v-write .drafts { display: none; }
+  .v-write.proof .editor-wrap { display: none; }
+  .ai__inner { width: 100%; }
+  .v-write:not(.proof) .ai { display: none; }
+  .editor { padding: 16px 16px 0; }
+  .meta .fname { width: 100%; max-width: 220px; }
+  .steps { flex-wrap: wrap; }
+  .page-wrap { padding: 20px 16px 48px; }
+  .grid2, .grid3, .preset { grid-template-columns: 1fr; }
+  .prow { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="dash" id="app">
+  <!-- Rail -->
+  <aside class="rail">
+    <div class="brand">
+      <img src="../icon.jpeg" alt="">
+      <div><b>Ayappi Studio</b><span>Ayappi Blog の投稿ダッシュボード</span></div>
+    </div>
+    <nav class="nav" aria-label="メニュー">
+      <button data-nav="write" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>執筆・下書き<span class="count" id="draftCount">0</span></button>
+      <button data-nav="published"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3.5 3 14.5 0 18M12 3c-3 3.5-3 14.5 0 18"/></svg>公開済み<span class="count" id="liveCount">–</span></button>
+      <button data-nav="prompts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8M9 4v5L4 19a1.5 1.5 0 001.3 2h13.4A1.5 1.5 0 0020 19L15 9V4"/></svg>校正プロンプト</button>
+      <button data-nav="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>設定</button>
+    </nav>
+    <div class="gh">
+      <div class="gh__row">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 00-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.56 9.56 0 015 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0012 2z"/></svg>
+        <span class="badge badge--off" id="ghBadge">未接続</span>
+      </div>
+      <div class="gh__repo" id="ghRepo"></div>
+      <div class="gh__meta" id="ghMeta">設定で GitHub のトークンを入れてください</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="top">
+      <div class="steps" id="steps" role="list" aria-label="投稿までの工程">
+        <button class="step" data-step="1" aria-current="step"><i>1</i><span>執筆</span></button><span class="step-line"></span>
+        <button class="step" data-step="2"><i>2</i><span>AI校正</span></button><span class="step-line"></span>
+        <button class="step" data-step="3"><i>3</i><span>HTMLプレビュー</span></button><span class="step-line"></span>
+        <button class="step" data-step="4"><i>4</i><span>公開</span></button>
+      </div>
+      <h1 class="page-title hidden" id="pageTitle"></h1>
+      <div class="top__right">
+        <span class="save" id="save">自動保存</span>
+      </div>
+    </header>
+
+    <!-- 1 + 2 : write / proofread -->
+    <section class="view v-write is-on" id="vWrite">
+      <div class="drafts">
+        <div class="drafts__head">
+          <h3 class="title">下書き一覧</h3>
+          <button class="btn btn--sm" id="newDraft"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>新規</button>
+        </div>
+        <div class="drafts__search"><input class="input" placeholder="下書きを検索..." id="dSearch" aria-label="下書きを検索"></div>
+        <div class="drafts__list" id="dList"></div>
+        <div class="drafts__foot">下書きはこのブラウザに自動保存されます</div>
+      </div>
+
+      <div class="editor-wrap">
+        <div class="editor">
+          <div class="editing-note hidden" id="editingNote"><span class="badge badge--live">公開済みを編集中</span><span id="editingId"></span></div>
+          <input class="title-in" id="title" placeholder="タイトル" aria-label="タイトル">
+          <div class="meta">
+            <label>公開日 <input type="date" id="date"></label>
+            <label>保存先 posts/<input class="fname" id="fname" aria-label="ファイル名" spellcheck="false" placeholder="タイトルから自動">.html</label>
+            <span class="wc" id="wc" style="margin-left:auto"></span>
+          </div>
+          <div class="sticky-tools">
+            <div class="toolbar" role="toolbar" aria-label="書式">
+              <button class="tool" data-block="h2" title="見出し（大）">H2</button>
+              <button class="tool" data-block="h3" title="見出し（小）">H3</button>
+              <button class="tool" data-block="p" title="本文">本文</button>
+              <span class="tool-sep"></span>
+              <button class="tool" data-cmd="bold" title="太字 (Ctrl+B)"><b>B</b></button>
+              <button class="tool" data-cmd="underline" title="下線 (Ctrl+U)"><u>U</u></button>
+              <span class="colors">
+                <button class="tool" id="colorBtn" title="文字色"><b>A</b><span id="curSw" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#1f45c8"></span></button>
+                <span class="pop" id="pop">
+                  <button data-color="" style="background:#111111" title="黒（標準）"></button>
+                  <button data-color="#1f45c8" style="background:#1f45c8" title="青"></button>
+                  <button data-color="#b3261e" style="background:#b3261e" title="赤"></button>
+                  <button data-color="#51624f" style="background:#51624f" title="緑"></button>
+                  <button class="bgopt" data-bg="#d3d3d3" style="background:#d3d3d3" title="背景グレー">bg</button>
+                </span>
+              </span>
+              <button class="tool" id="linkBtn" title="リンク"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 006 .5l3-3a4 4 0 00-5.7-5.7l-1.5 1.5"/><path d="M14 10a4 4 0 00-6-.5l-3 3a4 4 0 005.7 5.7l1.5-1.5"/></svg></button>
+              <span class="tool-sep"></span>
+              <button class="tool" id="imgBtn" title="画像を挿入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>画像</button>
+              <input type="file" id="file" accept="image/*" multiple hidden>
+              <span style="margin-left:auto"></span>
+              <button class="tool" data-cmd="undo" title="元に戻す"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14L4 9l5-5"/><path d="M4 9h11a5 5 0 010 10h-3"/></svg></button>
+              <button class="tool" data-cmd="redo" title="やり直す"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14l5-5-5-5"/><path d="M20 9H9a5 5 0 000 10h3"/></svg></button>
+            </div>
+          </div>
+          <div class="body" id="body" contenteditable="true" spellcheck="false" aria-label="本文"></div>
+          <div class="next-bar">
+            <button class="btn" id="toProof">AIで校正する</button>
+            <button class="btn btn--primary" id="toPreview">HTMLに変換 →</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="ai" aria-label="AI校正">
+        <div class="ai__inner">
+          <div class="ai__head">
+            <h3 class="title">AI 校正</h3>
+            <button class="btn btn--ghost btn--sm" id="closeAi">閉じる</button>
+          </div>
+          <div class="ai__body">
+            <div>
+              <span class="label">Model</span>
+              <div class="seg" id="provider">
+                <button aria-pressed="false" data-m="GPT">GPT</button>
+                <button aria-pressed="true" data-m="Claude">Claude</button>
+              </div>
+              <div class="ai__sum" id="modelName" style="margin-top:6px"></div>
+            </div>
+            <div>
+              <span class="label">校正プロンプト</span>
+              <div class="chips" id="presetChips"></div>
+              <textarea class="textarea" id="prompt" aria-label="校正プロンプト"></textarea>
+            </div>
+            <button class="btn btn--primary" id="runAi">Claude で校正する</button>
+            <div id="results"></div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- 3 + 4 : preview / publish -->
+    <section class="view v-prev" id="vPrev">
+      <div class="code-pane">
+        <div class="pane-head">
+          <h3 class="title">HTML</h3>
+          <button class="btn btn--ghost btn--sm" id="backEdit">← 執筆に戻る</button>
+          <button class="btn btn--sm" id="toEditor" title="手で直したHTMLをエディタに戻す">エディタに反映</button>
+          <button class="btn btn--sm" id="regen" title="エディタの内容からHTMLを作り直す">再変換</button>
+        </div>
+        <div class="file-tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-tab="post" id="tabPost"></button>
+          <button role="tab" aria-selected="false" data-tab="articles">articles.js</button>
+        </div>
+        <div class="code" id="codeBox"><textarea id="html" spellcheck="false" aria-label="HTMLソース"></textarea></div>
+        <div class="changes">
+          <span class="label" style="margin:0">GitHub に書き込まれるファイル</span>
+          <ul id="changes"></ul>
+        </div>
+      </div>
+      <div class="live-pane">
+        <div class="pane-head" style="background:var(--surface-paper)">
+          <h3 class="title">ライブプレビュー</h3>
+          <div class="seg" id="device">
+            <button aria-pressed="true" data-d="pc">PC</button>
+            <button aria-pressed="false" data-d="mobile">スマホ</button>
+          </div>
+          <button class="btn btn--frog" id="toPublish"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>公開する</button>
+        </div>
+        <div class="stage">
+          <div class="browser" id="browser">
+            <div class="chrome"><i></i><i></i><i></i><span class="url" id="url"></span></div>
+            <iframe id="frame" title="プレビュー" sandbox="allow-same-origin"></iframe>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- published -->
+    <section class="view v-page" id="vPublished">
+      <div class="page-wrap">
+        <div class="panel">
+          <div class="panel__head">
+            <h3 class="title">公開済みの記事 <span class="wc" id="pubSrc"></span></h3>
+            <button class="btn btn--sm" id="reloadPub">再読み込み</button>
+          </div>
+          <ul class="plist" id="pubList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- prompts -->
+    <section class="view v-page" id="vPrompts">
+      <div class="page-wrap">
+        <div class="panel">
+          <div class="panel__head"><h3 class="title">校正の基本指示</h3></div>
+          <div class="panel__body">
+            <textarea class="textarea" id="pBase" rows="4" aria-label="基本指示"></textarea>
+            <p class="help">すべての校正で最初に渡す指示です。下のプリセットのうち ON のものがこの後ろに続きます。</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__head"><h3 class="title">プリセット</h3><button class="btn btn--sm" id="addPreset">追加</button></div>
+          <div class="panel__body" id="presetList"></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+          <button class="btn btn--ghost" id="resetPrompts">初期値に戻す</button>
+          <button class="btn btn--primary" id="savePrompts">保存</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- settings -->
+    <section class="view v-page" id="vSettings">
+      <form class="page-wrap" id="settingsForm" autocomplete="off">
+        <div class="panel">
+          <div class="panel__head"><h3 class="title">GitHub</h3><span class="badge" id="ghTest">未確認</span></div>
+          <div class="panel__body">
+            <div class="grid3">
+              <label><span class="label">オーナー</span><input class="input" name="owner"></label>
+              <label><span class="label">リポジトリ</span><input class="input" name="repo"></label>
+              <label><span class="label">ブランチ</span><input class="input" name="branch"></label>
+            </div>
+            <label><span class="label">Personal access token</span><input class="input" type="password" name="ghToken" placeholder="github_pat_..."></label>
+            <p class="help">Fine-grained token で、このリポジトリだけに <code>Contents: Read and write</code> を付けたものを使ってください。トークンはこのブラウザにだけ保存され、GitHub 以外には送られません。</p>
+            <label><span class="label">サイトの URL</span><input class="input" name="siteUrl" placeholder="https://ayappi4649.github.io/ayappi_blog/"></label>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__head"><h3 class="title">Claude（Anthropic）</h3></div>
+          <div class="panel__body">
+            <div class="grid2">
+              <label><span class="label">API キー</span><input class="input" type="password" name="claudeKey" placeholder="sk-ant-..."></label>
+              <label><span class="label">モデル</span><input class="input" name="claudeModel" list="claudeModels"></label>
+            </div>
+            <datalist id="claudeModels"><option value="claude-opus-5-5"><option value="claude-sonnet-5-5"><option value="claude-haiku-5-5"></datalist>
+            <p class="help">API キーは console.anthropic.com で発行できます。ブラウザから Anthropic API へ直接送信します。</p>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel__head"><h3 class="title">GPT（OpenAI）</h3></div>
+          <div class="panel__body">
+            <div class="grid2">
+              <label><span class="label">API キー</span><input class="input" type="password" name="openaiKey" placeholder="sk-..."></label>
+              <label><span class="label">モデル</span><input class="input" name="openaiModel"></label>
+            </div>
+            <p class="help">API キーは platform.openai.com で発行できます。モデル名は使いたいものに書き換えてください。</p>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">
+          <button type="button" class="btn" id="testGh">GitHub 接続を確認</button>
+          <button type="submit" class="btn btn--primary">保存</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <!-- publish / delete modal -->
+  <div class="scrim" id="scrim">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <div class="modal__head">
+        <h2 id="mTitle">GitHub に公開しますか？</h2>
+        <p id="mSub"></p>
+      </div>
+      <div class="modal__body">
+        <div class="target"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="8" r="2"/><path d="M6 8v8M18 10c0 4-6 3-10 6"/></svg><span id="mTarget"></span></div>
+        <div id="mForm">
+          <label class="label" for="msg">コミットメッセージ</label>
+          <input class="input" id="msg">
+        </div>
+        <ul class="prog hidden" id="prog"></ul>
+        <div class="perr hidden" id="perr"></div>
+      </div>
+      <div class="modal__foot" id="mFoot">
+        <button class="btn" id="cancel">キャンセル</button>
+        <button class="btn btn--frog" id="go">公開する</button>
+      </div>
+    </div>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+</div>
+
+<script src="./lib.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

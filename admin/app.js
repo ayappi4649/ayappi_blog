@@ -1,4 +1,4 @@
-/* Ayappi Studio — 執筆 → AI校正 → HTMLプレビュー → GitHub 公開 */
+/* Ayappi Studio — 執筆 → HTMLプレビュー → GitHub 公開 */
 (function () {
   "use strict";
   var L = window.StudioLib;

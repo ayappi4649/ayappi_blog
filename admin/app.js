@@ -10,7 +10,7 @@
 
   /* ── 設定 ─────────────────────────────── */
   var DEFAULTS = {
-    owner: "ayappi4649", repo: "ayappi_blog", branch: "main", ghToken: "",
+    owner: "ayappi4649", repo: "ayappi_blog", branch: "main", ghToken: "", draftsRepo: "ayappi_blog_drafts",
     siteUrl: "https://ayappi4649.github.io/ayappi_blog/"
   };
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
@@ -53,12 +53,13 @@
 
   /* ── GitHub API ─────────────────────────── */
   function encPath(p) { return p.split("/").map(encodeURIComponent).join("/"); }
-  function gh(path, opts) {
+  /* repo を省略するとブログ本体のリポジトリ */
+  function gh(path, opts, repo) {
     opts = opts || {};
     if (!S.ghToken) return Promise.reject(new Error("設定で GitHub のトークンを入れてください"));
     var headers = { Authorization: "Bearer " + S.ghToken, Accept: "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28" };
     if (opts.body) headers["Content-Type"] = "application/json";
-    return fetch("https://api.github.com/repos/" + S.owner + "/" + S.repo + path, {
+    return fetch("https://api.github.com/repos/" + S.owner + "/" + (repo || S.repo) + path, {
       method: opts.method || "GET", headers: headers, body: opts.body ? JSON.stringify(opts.body) : undefined, cache: "no-store"
     }).then(function (r) {
       if (r.status === 204) return null;
@@ -73,42 +74,48 @@
     for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
     return new TextDecoder().decode(bytes);
   }
-  function getText(path, ref) {
-    return gh("/contents/" + encPath(path) + "?ref=" + encodeURIComponent(ref || S.branch)).then(function (j) {
-      if (j.content) return b64ToText(j.content);
-      return gh("/git/blobs/" + j.sha).then(function (b) { return b64ToText(b.content); });
+  function textToB64(t) {
+    var bytes = new TextEncoder().encode(t), bin = "";
+    for (var i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(bin);
+  }
+  function getB64(path, ref, repo) {
+    return gh("/contents/" + encPath(path) + "?ref=" + encodeURIComponent(ref || S.branch), null, repo).then(function (j) {
+      if (j.content) return j.content.replace(/\s/g, "");
+      return gh("/git/blobs/" + j.sha, null, repo).then(function (b) { return b.content.replace(/\s/g, ""); });
     });
   }
-  function listDir(path, ref) {
-    return gh("/contents/" + encPath(path) + "?ref=" + encodeURIComponent(ref || S.branch))
-      .then(function (j) { return Array.isArray(j) ? j.map(function (x) { return x.name; }) : []; })
+  function getText(path, ref, repo) { return getB64(path, ref, repo).then(b64ToText); }
+  function listDir(path, ref, repo) {
+    return gh("/contents/" + encPath(path) + "?ref=" + encodeURIComponent(ref || S.branch), null, repo)
+      .then(function (j) { return Array.isArray(j) ? j : []; })
       .catch(function (e) { if (e.status === 404) return []; throw e; });
   }
-  function headSha() { return gh("/git/ref/heads/" + encodeURIComponent(S.branch)).then(function (r) { return r.object.sha; }); }
+  function headSha(repo, branch) { return gh("/git/ref/heads/" + encodeURIComponent(branch || S.branch), null, repo).then(function (r) { return r.object.sha; }); }
   /* changes: [{path, text}] / [{path, base64}] / [{path, remove:true}] → 1 コミットでまとめて push */
-  function commit(baseSha, message, changes, onStep) {
+  function commit(baseSha, message, changes, onStep, repo, branch) {
     var tree = [];
-    return gh("/git/commits/" + baseSha).then(function (c) {
+    return gh("/git/commits/" + baseSha, null, repo).then(function (c) {
       var seq = Promise.resolve();
       changes.forEach(function (ch) {
         seq = seq.then(function () {
           if (ch.remove) { tree.push({ path: ch.path, mode: "100644", type: "blob", sha: null }); return; }
           if (ch.text != null) { tree.push({ path: ch.path, mode: "100644", type: "blob", content: ch.text }); return; }
           onStep && onStep("blob", ch.path);
-          return gh("/git/blobs", { method: "POST", body: { content: ch.base64, encoding: "base64" } })
+          return gh("/git/blobs", { method: "POST", body: { content: ch.base64, encoding: "base64" } }, repo)
             .then(function (b) { tree.push({ path: ch.path, mode: "100644", type: "blob", sha: b.sha }); });
         });
       });
       return seq.then(function () {
         onStep && onStep("tree");
-        return gh("/git/trees", { method: "POST", body: { base_tree: c.tree.sha, tree: tree } });
+        return gh("/git/trees", { method: "POST", body: { base_tree: c.tree.sha, tree: tree } }, repo);
       });
     }).then(function (t) {
       onStep && onStep("commit");
-      return gh("/git/commits", { method: "POST", body: { message: message, tree: t.sha, parents: [baseSha] } });
+      return gh("/git/commits", { method: "POST", body: { message: message, tree: t.sha, parents: [baseSha] } }, repo);
     }).then(function (nc) {
       onStep && onStep("push");
-      return gh("/git/refs/heads/" + encodeURIComponent(S.branch), { method: "PATCH", body: { sha: nc.sha } }).then(function () { return nc; });
+      return gh("/git/refs/heads/" + encodeURIComponent(branch || S.branch), { method: "PATCH", body: { sha: nc.sha } }, repo).then(function () { return nc; });
     });
   }
 
@@ -129,9 +136,147 @@
     b.className = "badge " + (ok ? "badge--live" : "badge--off"); b.textContent = ok ? "接続済み" : "未接続";
     $("#ghRepo").textContent = S.owner + "/" + S.repo;
     $("#ghMeta").innerHTML = ok
-      ? "ブランチ <code>" + esc(S.branch) + "</code><br>最新コミット <code>" + esc((sha || "").slice(0, 7)) + "</code><br><a href=\"" + esc(siteBase()) + "\" target=\"_blank\" rel=\"noopener\">サイトを開く</a>"
+      ? "ブランチ <code>" + esc(S.branch) + "</code><br>最新コミット <code>" + esc((sha || "").slice(0, 7)) + "</code><br>下書き <code>" + esc(S.draftsRepo || "未設定") + "</code><br><a href=\"" + esc(siteBase()) + "\" target=\"_blank\" rel=\"noopener\">サイトを開く</a>"
       : (S.ghToken ? "接続できませんでした。設定を確認してください" : "設定で GitHub のトークンを入れてください");
   }
+
+  /* ── GitHub 上の下書き（非公開の下書き用リポジトリ） ──
+     drafts/<id>/draft.json に本文など、drafts/<id>/images/ に画像を置く */
+  var draftsT = null;
+  function draftsTarget() {
+    if (draftsT) return draftsT;
+    var repo = S.draftsRepo;
+    if (!repo) return Promise.reject(new Error("設定で下書き用リポジトリを入れてください"));
+    draftsT = gh("", null, repo).then(function (info) {
+      var branch = info.default_branch || "main";
+      return headSha(repo, branch).catch(function (e) {
+        if (e.status !== 409 && e.status !== 404) throw e;
+        /* 空のリポジトリなら README を置いて最初のコミットを作る */
+        return gh("/contents/README.md", { method: "PUT", body: { message: "Initialize drafts", content: textToB64("# Ayappi Blog drafts\n\nAyappi Studio の下書き置き場です。\n"), branch: branch } }, repo)
+          .then(function () { return headSha(repo, branch); });
+      }).then(function () { return { repo: repo, branch: branch }; });
+    });
+    draftsT.catch(function () { draftsT = null; });
+    return draftsT;
+  }
+  function draftDir(d) { return "drafts/" + d.id + "/"; }
+  function mimeOf(name) { var e = (name.split(".").pop() || "").toLowerCase(); return { jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", svg: "image/svg+xml" }[e] || "application/octet-stream"; }
+  /* 画像の中身（data URL）は別ファイルにするので、本文 HTML からは外す */
+  function htmlForRemote(d) {
+    var tpl = document.createElement("template"); tpl.innerHTML = d.html;
+    Array.prototype.forEach.call(tpl.content.querySelectorAll("img[data-file]"), function (i) { if (d.images && d.images[i.dataset.file]) i.removeAttribute("src"); });
+    Array.prototype.forEach.call(tpl.content.querySelectorAll("mark.hl"), function (m) { m.replaceWith(document.createTextNode(m.textContent)); });
+    return tpl.innerHTML;
+  }
+  function isDirty(d) { return !d.remoteUpdated || d.updated !== d.remoteUpdated; }
+  function saveDraftRemote(d) {
+    return draftsTarget().then(function (t) {
+      return headSha(t.repo, t.branch).then(function (head) {
+        var dir = draftDir(d), names = Object.keys(d.images || {}), up = d.remoteImages || [];
+        var data = { version: 1, id: d.id, title: d.title, date: d.date, fname: d.fname || "", fnameTouched: !!d.fnameTouched,
+          articleId: d.articleId || null, contentFile: d.contentFile || null, updated: d.updated, html: htmlForRemote(d), images: names };
+        var changes = [{ path: dir + "draft.json", text: JSON.stringify(data, null, 2) + "\n" }];
+        names.filter(function (n) { return up.indexOf(n) < 0; }).forEach(function (n) { changes.push({ path: dir + "images/" + n, base64: d.images[n].split(",")[1] }); });
+        up.filter(function (n) { return names.indexOf(n) < 0; }).forEach(function (n) { changes.push({ path: dir + "images/" + n, remove: true }); });
+        return commit(head, "draft: 「" + (d.title || "無題") + "」を保存", changes, null, t.repo, t.branch).then(function () {
+          d.remoteImages = names; d.remoteUpdated = d.updated; d.conflict = null;
+          return store.put(d);
+        });
+      });
+    });
+  }
+  function deleteDraftRemote(d) {
+    if (!d.remoteUpdated) return Promise.resolve();
+    return draftsTarget().then(function (t) {
+      return listDir(draftDir(d).replace(/\/$/, ""), t.branch, t.repo).then(function (top) {
+        var paths = top.filter(function (x) { return x.type === "file"; }).map(function (x) { return x.path; });
+        return (top.some(function (x) { return x.name === "images"; }) ? listDir(draftDir(d) + "images", t.branch, t.repo) : Promise.resolve([]))
+          .then(function (imgs) { return paths.concat(imgs.map(function (x) { return x.path; })); });
+      }).then(function (paths) {
+        if (!paths.length) return;
+        return headSha(t.repo, t.branch).then(function (head) {
+          return commit(head, "draft: 「" + (d.title || "無題") + "」を削除", paths.map(function (p) { return { path: p, remove: true }; }), null, t.repo, t.branch);
+        });
+      });
+    });
+  }
+  function fetchRemoteDrafts() {
+    return draftsTarget().then(function (t) {
+      return listDir("drafts", t.branch, t.repo).then(function (dirs) {
+        return Promise.all(dirs.filter(function (x) { return x.type === "dir"; }).map(function (x) {
+          return getText("drafts/" + x.name + "/draft.json", t.branch, t.repo).then(JSON.parse).catch(function () { return null; });
+        }));
+      }).then(function (list) { return list.filter(Boolean); });
+    });
+  }
+  /* GitHub にある画像を読み込んで本文に表示する */
+  function hydrateImages(d) {
+    var need = (d.pendingImages || []).slice();
+    if (!need.length) return Promise.resolve();
+    return draftsTarget().then(function (t) {
+      return Promise.all(need.map(function (n) {
+        return getB64(draftDir(d) + "images/" + n, t.branch, t.repo).then(function (b64) {
+          d.images = d.images || {}; d.images[n] = "data:" + mimeOf(n) + ";base64," + b64;
+        }).catch(function () { /* 見つからない画像は飛ばす */ });
+      }));
+    }).then(function () {
+      d.pendingImages = (d.pendingImages || []).filter(function (n) { return !d.images[n]; });
+      var tpl = document.createElement("template"); tpl.innerHTML = d.html;
+      Array.prototype.forEach.call(tpl.content.querySelectorAll("img[data-file]"), function (i) { if (d.images[i.dataset.file]) i.src = d.images[i.dataset.file]; });
+      d.html = tpl.innerHTML;
+      if (d === cur) $$("#body img[data-file]").forEach(function (i) { if (d.images[i.dataset.file]) i.src = d.images[i.dataset.file]; });
+      return store.put(d);
+    });
+  }
+  function applyRemote(l, r) {
+    ["title", "date", "fname", "fnameTouched", "articleId", "contentFile", "html", "updated"].forEach(function (k) { l[k] = r[k]; });
+    l.images = l.images || {};
+    Object.keys(l.images).forEach(function (n) { if (r.images.indexOf(n) < 0) delete l.images[n]; });
+    l.pendingImages = r.images.filter(function (n) { return !l.images[n]; });
+    l.remoteImages = r.images.slice(); l.remoteUpdated = r.updated; l.conflict = null;
+    var tpl = document.createElement("template"); tpl.innerHTML = l.html;
+    Array.prototype.forEach.call(tpl.content.querySelectorAll("img[data-file]"), function (i) { if (l.images[i.dataset.file]) i.src = l.images[i.dataset.file]; });
+    l.html = tpl.innerHTML;
+    return l;
+  }
+  var syncing = null, lastSync = 0;
+  function syncDrafts() {
+    if (!S.ghToken || !S.draftsRepo) return Promise.resolve();
+    if (syncing) return syncing;
+    setSync("GitHub と同期中…");
+    syncing = flush().then(fetchRemoteDrafts).then(function (remote) {
+      var ids = {};
+      remote.forEach(function (r) {
+        ids[r.id] = 1;
+        var l = drafts.filter(function (d) { return d.id === r.id; })[0];
+        if (!l) { var d = applyRemote({ id: r.id, images: {} }, r); drafts.push(d); store.put(d); return; }
+        if (r.updated === l.remoteUpdated) return;
+        if (!isDirty(l) || !l.remoteUpdated && r.updated === l.updated) { applyRemote(l, r); store.put(l); if (l === cur) load(l); }
+        else { l.conflict = r.updated; store.put(l); }
+      });
+      /* 他の端末で削除・公開された下書き */
+      drafts.slice().forEach(function (l) {
+        if (!l.remoteUpdated || ids[l.id]) return;
+        if (!isDirty(l)) { drafts = drafts.filter(function (x) { return x !== l; }); store.del(l.id); if (l === cur) { if (!drafts.length) drafts.push(blankDraft()); load(newest()); } }
+        else { l.remoteUpdated = null; l.remoteImages = []; store.put(l); }
+      });
+      /* 何も書いていない「この端末のみ」の下書きは、他に下書きがあれば片付ける */
+      var empty = function (d) { return !d.remoteUpdated && !d.articleId && !d.title && !chars(d.html) && !Object.keys(d.images || {}).length; };
+      if (drafts.some(function (d) { return !empty(d); })) {
+        /* 開いている下書きは、起動直後の同期のときだけ片付ける（「新規」直後に消えないように） */
+        drafts.filter(function (d) { return empty(d) && (d !== cur || !lastSync); }).forEach(function (d) { drafts = drafts.filter(function (x) { return x !== d; }); store.del(d.id); });
+        if (drafts.indexOf(cur) < 0) load(newest());
+      }
+      lastSync = Date.now();
+      setSync("GitHub と同期済み · " + hhmm());
+      renderList(); syncNote();
+    }).catch(function (e) {
+      setSync(e.status === 404 ? "下書き用リポジトリ「" + S.draftsRepo + "」が見つかりません" : "同期できませんでした：" + e.message, true);
+    }).then(function () { syncing = null; });
+    return syncing;
+  }
+  function setSync(t, bad) { var el = $("#syncState"); el.textContent = t; el.classList.toggle("bad", !!bad); }
+  function newest() { return drafts.slice().sort(function (a, b) { return b.updated - a.updated; })[0]; }
 
   /* ── 状態 ─────────────────────────────── */
   var drafts = [], cur = null, confirmId = null, step = 1, view = "write";
@@ -140,7 +285,7 @@
 
   function blankDraft() {
     return { id: "d" + Date.now() + Math.random().toString(36).slice(2, 6), title: "", date: today(), fname: "", fnameTouched: false,
-      html: "<p><br></p>", images: {}, status: "draft", updated: Date.now(), articleId: null, contentFile: null };
+      html: "<p><br></p>", images: {}, updated: Date.now(), articleId: null, contentFile: null, remoteUpdated: null, remoteImages: [] };
   }
   function chars(html) { var d = document.createElement("div"); d.innerHTML = html; return (d.textContent || "").replace(/\s/g, "").length; }
   function ago(t) {
@@ -157,9 +302,13 @@
     $("#dList").innerHTML = shown.map(function (d) {
       var t = esc(d.title || "（無題）");
       if (d.id === confirmId) {
-        return '<div class="ditem"><div class="dconfirm" role="alertdialog" aria-label="下書きの削除"><p>「' + t + '」を削除しますか？</p><small>' + chars(d.html).toLocaleString() + "字の本文" + (Object.keys(d.images || {}).length ? "と添付画像" : "") + "が消えます。" + (d.articleId ? "公開済みの記事はそのまま残ります。" : "") + '</small><div><button class="btn btn--sm btn--danger" data-del="' + d.id + '">削除する</button><button class="btn btn--sm" data-cancel="1">キャンセル</button></div></div></div>';
+        return '<div class="ditem"><div class="dconfirm" role="alertdialog" aria-label="下書きの削除"><p>「' + t + '」を削除しますか？</p><small>' + chars(d.html).toLocaleString() + "字の本文" + (Object.keys(d.images || {}).length ? "と添付画像" : "") + "が消えます。" + (d.remoteUpdated ? "GitHub の下書きも削除します。" : "") + (d.articleId ? "公開済みの記事はそのまま残ります。" : "") + '</small><div><button class="btn btn--sm btn--danger" data-del="' + d.id + '">削除する</button><button class="btn btn--sm" data-cancel="1">キャンセル</button></div></div></div>';
       }
-      var badge = d.articleId ? '<span class="badge badge--live">公開済みを編集</span>' : '<span class="badge badge--draft">下書き</span>';
+      var badge = d.conflict ? '<span class="badge badge--off">他の端末で更新あり</span>'
+        : !d.remoteUpdated ? '<span class="badge badge--draft">この端末のみ</span>'
+        : isDirty(d) ? '<span class="badge badge--draft">未保存の変更</span>'
+        : '<span class="badge badge--saved">Draft</span>';
+      if (d.articleId) badge = '<span class="badge badge--live">公開済みを編集</span>' + badge;
       return '<div class="ditem"><button class="drow" data-id="' + d.id + '" aria-current="' + (d === cur) + '"><div class="drow__t">' + t + '</div><div class="drow__m">' + badge + "<span>" + ago(d.updated) + '</span><span class="sp">' + chars(d.html).toLocaleString() + "字</span></div></button>" +
         '<button class="ddel" data-ask="' + d.id + '" title="この下書きを削除" aria-label="「' + t + '」を削除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button></div>';
     }).join("") || '<div class="dempty">下書きはありません。<br>「新規」から書き始めましょう。</div>';
@@ -175,16 +324,23 @@
     body.innerHTML = d.html;
     $("#editingNote").classList.toggle("hidden", !d.articleId);
     $("#editingId").textContent = d.articleId ? "id: " + d.articleId + " · " + postPath(d) : "";
-    meta(); renderList();
+    meta(); renderList(); syncNote();
+    if (d.pendingImages && d.pendingImages.length) hydrateImages(d).catch(function () { /* 次回の同期で再試行 */ });
+  }
+  function syncNote() {
+    var n = $("#syncNote");
+    n.classList.toggle("hidden", !(cur && cur.conflict));
   }
   function meta() { $("#wc").textContent = chars(body.innerHTML).toLocaleString() + " 字"; }
 
   var saveT;
   function snapshot() {
     if (!cur) return;
-    cur.title = title.value.trim(); cur.date = date.value || today();
-    if (!cur.contentFile) { cur.fname = fname.value.trim(); }
-    unmarkAll(); cur.html = body.innerHTML; cur.updated = Date.now();
+    unmarkAll();
+    var next = { title: title.value.trim(), date: date.value || today(), fname: cur.contentFile ? cur.fname : fname.value.trim(), html: body.innerHTML };
+    var changed = Object.keys(next).some(function (k) { return (cur[k] || "") !== next[k]; });
+    Object.assign(cur, next);
+    if (changed) cur.updated = Date.now();
     var used = {};
     $$("#body img[data-file]").forEach(function (i) { used[i.dataset.file] = 1; });
     Object.keys(cur.images || {}).forEach(function (k) { if (!used[k]) delete cur.images[k]; });
@@ -231,9 +387,15 @@
     drafts = drafts.filter(function (d) { return d !== gone; });
     confirmId = null;
     store.del(id);
-    if (gone === cur) { if (!drafts.length) drafts.push(blankDraft()); load(drafts.slice().sort(function (a, b) { return b.updated - a.updated; })[0]); }
+    if (gone === cur) { if (!drafts.length) drafts.push(blankDraft()); load(newest()); }
     else renderList();
-    if (!silent) toast({ error: true, title: "下書きを削除しました", msg: "「" + (gone.title || "（無題）") + "」", action: "元に戻す", onAction: function () { drafts.push(gone); store.put(gone); load(gone); }, ttl: 10000 });
+    var wasRemote = !!gone.remoteUpdated;
+    if (wasRemote && !silent) deleteDraftRemote(gone).catch(function (e) { toast({ error: true, title: "GitHub の下書きを削除できませんでした", msg: e.message }); });
+    if (!silent) toast({ error: true, title: "下書きを削除しました", msg: "「" + (gone.title || "（無題）") + "」" + (wasRemote ? "（GitHub からも削除）" : ""), action: "元に戻す", onAction: function () {
+      gone.remoteUpdated = null; gone.remoteImages = []; gone.conflict = null;
+      drafts.push(gone); store.put(gone); load(gone);
+      if (wasRemote) toast({ title: "この端末に戻しました", msg: "GitHub にも戻すには「Draft保存」を押してください" });
+    }, ttl: 10000 });
   }
   $("#dSearch").addEventListener("input", renderList);
   $("#newDraft").addEventListener("click", function () {
@@ -396,6 +558,46 @@
     return ok ? Promise.resolve() : Promise.reject(new Error("コピーできませんでした"));
   }
   /* タイトルと本文をそのままコピー */
+  /* ── Draft保存（GitHub の非公開リポジトリへ） ─────── */
+  var draftBtnT;
+  function saveDraft() {
+    var btn = $("#saveDraft"), label = btn.querySelector("span");
+    if (!S.ghToken) { toast({ error: true, title: "GitHub のトークンが未設定です", msg: "左の「設定」から入力してください" }); return; }
+    if (btn.disabled) return;
+    var d = cur;
+    flush().then(function () {
+      if (d.pendingImages && d.pendingImages.length) throw new Error("画像を GitHub から読み込み中です。少し待ってからもう一度押してください");
+      if (d.conflict && !confirm("他の端末で、この下書きの新しい版が GitHub に保存されています。\nこの端末の内容で上書きしますか？")) return "skip";
+      if (!isDirty(d) && !d.conflict) return "same";
+      btn.disabled = true; label.textContent = "保存中…";
+      return saveDraftRemote(d);
+    }).then(function (r) {
+      if (r === "skip") return;
+      btn.disabled = false; btn.classList.add("is-done"); label.textContent = r === "same" ? "保存済みです" : "保存しました";
+      clearTimeout(draftBtnT); draftBtnT = setTimeout(function () { btn.classList.remove("is-done"); label.textContent = "Draft保存"; }, 2000);
+      renderList(); syncNote();
+    }).catch(function (e) {
+      btn.disabled = false; label.textContent = "Draft保存";
+      toast({ error: true, title: "Draft保存できませんでした", msg: e.status === 404 ? "下書き用リポジトリ「" + S.draftsRepo + "」が見つかりません。設定とトークンの権限を確認してください" : e.message });
+    });
+  }
+  $("#saveDraft").addEventListener("click", saveDraft);
+  document.addEventListener("keydown", function (e) {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && view === "write") { e.preventDefault(); saveDraft(); }
+  });
+  $("#syncDrafts").addEventListener("click", function () { syncDrafts(); });
+  /* 他の端末の版で上書き */
+  $("#takeRemote").addEventListener("click", function () {
+    var d = cur, btn = this;
+    btn.disabled = true;
+    draftsTarget().then(function (t) { return getText(draftDir(d) + "draft.json", t.branch, t.repo); }).then(function (txt) {
+      applyRemote(d, JSON.parse(txt)); return store.put(d);
+    }).then(function () { load(d); toast({ title: "GitHub の版を読み込みました" }); })
+      .catch(function (e) { toast({ error: true, title: "読み込めませんでした", msg: e.message }); })
+      .then(function () { btn.disabled = false; });
+  });
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible" && Date.now() - lastSync > 30000) syncDrafts(); });
+
   var copyAllT;
   $("#copyAll").addEventListener("click", function () {
     var btn = this, label = btn.querySelector("span"), text = plainText();
@@ -628,6 +830,7 @@
 
   $("#toPublish").addEventListener("click", function () { go(3); });
   function openPublish() {
+    if (cur.pendingImages && cur.pendingImages.length) { toast({ error: true, title: "画像を読み込み中です", msg: "少し待ってからもう一度押してください" }); step = 2; go(2); return; }
     if (!S.ghToken) { toast({ error: true, title: "GitHub のトークンが未設定です", msg: "左の「設定」から入力してください" }); step = 2; go(2); return; }
     if (!title.value.trim()) { toast({ error: true, title: "タイトルを入れてください" }); go(1); title.focus(); return; }
     if (!cur.articleId && pub.list && pub.list.some(function (a) { return a.contentFile === "./" + postPath(cur); })) {
@@ -652,7 +855,7 @@
     pr.next();
     headSha().then(function (sha) {
       base = sha;
-      return Promise.all([getText("articles.js", sha), imgs.length ? listDir("posts/images", sha) : []]);
+      return Promise.all([getText("articles.js", sha), imgs.length ? listDir("posts/images", sha).then(function (a) { return a.map(function (x) { return x.name; }); }) : []]);
     }).then(function (r) {
       plan = applyArticles(r[0]);
       if (!d.articleId && plan.list.some(function (a) { return a.contentFile === plan.entry.contentFile; })) throw new Error(postPath(d) + " はすでに使われています。ファイル名を変えてください");
@@ -677,6 +880,7 @@
       setTimeout(function () {
         $("#scrim").classList.remove("open"); modalCancel = null;
         removeDraft(d.id, true);
+        if (d.remoteUpdated) deleteDraftRemote(d).catch(function (e) { toast({ error: true, title: "GitHub の下書きを削除できませんでした", msg: e.message + "（下書き一覧から手動で削除してください）" }); });
         step = 1; go(1);
         toast({
           title: d.articleId ? "更新しました" : "公開しました",
@@ -763,11 +967,11 @@
 
   /* ── 設定 ─────────────────────────────── */
   var form = $("#settingsForm");
-  function fillSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl"].forEach(function (k) { form.elements[k].value = S[k] || ""; }); }
-  function readSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl"].forEach(function (k) { S[k] = form.elements[k].value.trim(); }); lsSet("studio.settings", S); }
+  function fillSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "draftsRepo"].forEach(function (k) { form.elements[k].value = S[k] || ""; }); }
+  function readSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "draftsRepo"].forEach(function (k) { S[k] = form.elements[k].value.trim(); }); draftsT = null; lsSet("studio.settings", S); }
   form.addEventListener("submit", function (e) {
     e.preventDefault(); readSettings(); pub.list = null;
-    toast({ title: "設定を保存しました" }); loadPublished().then(testBadge);
+    toast({ title: "設定を保存しました" }); loadPublished().then(testBadge); syncDrafts();
   });
   function testBadge() {
     var b = $("#ghTest");
@@ -775,7 +979,16 @@
     return gh("").then(function (r) {
       var ok = r.permissions && r.permissions.push;
       b.className = "badge " + (ok ? "badge--live" : "badge--off"); b.textContent = ok ? "書き込み可" : "書き込み権限なし";
-    }).catch(function (e) { b.className = "badge badge--off"; b.textContent = e.status === 401 ? "トークンが無効" : e.status === 404 ? "リポジトリが見つからない" : "エラー"; });
+    }).catch(function (e) { b.className = "badge badge--off"; b.textContent = e.status === 401 ? "トークンが無効" : e.status === 404 ? "リポジトリが見つからない" : "エラー"; })
+      .then(function () {
+        var db = $("#draftsTest");
+        if (!S.draftsRepo) { db.className = "badge"; db.textContent = "未設定"; return; }
+        return gh("", null, S.draftsRepo).then(function (r) {
+          var ok = r.permissions && r.permissions.push;
+          db.className = "badge " + (ok && r.private ? "badge--live" : "badge--off");
+          db.textContent = !ok ? "書き込み権限なし" : r.private ? "非公開・書き込み可" : "公開リポジトリです（非公開推奨）";
+        }).catch(function (e) { db.className = "badge badge--off"; db.textContent = e.status === 401 ? "トークンが無効" : e.status === 404 ? "見つからない（権限を確認）" : "エラー"; });
+      });
   }
   $("#testGh").addEventListener("click", function () { readSettings(); testBadge(); });
 
@@ -804,9 +1017,9 @@
   store.all().then(function (all) {
     drafts = all || [];
     if (!drafts.length) { var d = blankDraft(); drafts.push(d); store.put(d); }
-    load(drafts.slice().sort(function (a, b) { return b.updated - a.updated; })[0]);
-    if (!S.ghToken) { show("settings"); toast({ title: "はじめに設定をしてください", msg: "GitHub のトークンを入れると使えるようになります。", ttl: 8000 }); }
-    else loadPublished();
+    load(newest());
+    if (!S.ghToken) { show("settings"); setSync("GitHub に接続すると、どの端末からでも下書きを開けます"); toast({ title: "はじめに設定をしてください", msg: "GitHub のトークンを入れると使えるようになります。", ttl: 8000 }); }
+    else { loadPublished(); syncDrafts(); }
   });
   setInterval(renderList, 30000);
   /* 動作確認用 */

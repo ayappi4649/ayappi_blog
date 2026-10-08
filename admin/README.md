@@ -4,16 +4,26 @@ Ayappi Blog の記事を「執筆 → HTMLプレビュー → GitHub に公開�
 サーバーは不要で、GitHub Pages 上の `admin/` をブラウザで開くだけで使えます。
 
 - URL: `https://ayappi4649.github.io/ayappi_blog/admin/`
-- 下書き・設定・トークンは **そのブラウザの中だけ** に保存されます（リポジトリには入りません）。
+- 「Draft保存」した下書きは、非公開の下書き用リポジトリ（`ayappi_blog_drafts`）に保存され、どの端末からでも開けます。
+- 設定とトークンは **そのブラウザの中だけ** に保存されます（リポジトリには入りません）。
 
 ## はじめに（設定）
 
-左メニューの「設定」で GitHub トークンを入力して保存します。
+1. GitHub で下書き用の **Private** リポジトリ `ayappi_blog_drafts` を作る（中身は空で OK）
+2. Fine-grained personal access token を作る（https://github.com/settings/personal-access-tokens/new ）
+   - Repository access：`ayappi_blog` と `ayappi_blog_drafts` の 2 つ
+   - 権限：**Contents: Read and write**
+3. 左メニューの「設定」でトークンを入れて保存
 
-- Fine-grained personal access token（https://github.com/settings/personal-access-tokens/new ）
-- Repository access は `ayappi4649/ayappi_blog` だけ、権限は **Contents: Read and write** のみ
+「GitHub 接続を確認」で、ブログが「書き込み可」、下書き用リポジトリが「非公開・書き込み可」と出れば準備完了です。
 
-「GitHub 接続を確認」で「書き込み可」と出れば準備完了です。
+## 下書き
+
+- 入力中はこのブラウザに自動保存されます（GitHub にはまだ送られません）。
+- 「Draft保存」（Ctrl+S / ⌘+S）で、下書き用リポジトリの `drafts/<id>/` に本文（`draft.json`）と画像を 1 コミットで保存します。
+- ダッシュボードを開いたとき・タブに戻ったとき・同期ボタンを押したときに GitHub の下書きを読み込むので、別の端末で保存した下書きも一覧に出ます。
+- 一覧のラベル：`Draft`（GitHub と同じ）／`未保存の変更`（Draft保存がまだ）／`この端末のみ`（一度も Draft保存していない）／`他の端末で更新あり`（両方で編集した。「GitHub の版を読み込む」か、この端末の内容で Draft保存して上書き）
+- 公開すると GitHub 上の下書きは自動で削除されます。下書きを削除したときも GitHub から削除します。
 
 ## 公開時に行うこと
 
@@ -40,6 +50,7 @@ Ayappi Blog の記事を「執筆 → HTMLプレビュー → GitHub に公開�
 ## 機能
 
 - **執筆**：見出し・太字・下線・文字色・リンク・画像＋キャプション。大きな写真は幅 1600px の JPEG に自動縮小。
+- **Draft保存**：下書きを非公開リポジトリに保存。どの端末からでも続きを書けます。
 - **全文コピー**：タイトルと本文を文章だけでコピー。claude.ai や ChatGPT に貼って校正してもらうときなどに。
 - **HTMLプレビュー**：実際の `article.html` のスタイルで PC / スマホ表示を確認。HTML を直接直すこともできます。
 - **公開済み**：`articles.js` の一覧から記事を開いて編集・更新、または削除（記事ファイルと一覧の項目を削除するコミットを作成）。

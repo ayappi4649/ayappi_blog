@@ -13,20 +13,10 @@
     owner: "ayappi4649", repo: "ayappi_blog", branch: "main", ghToken: "",
     siteUrl: "https://ayappi4649.github.io/ayappi_blog/"
   };
-  var PROMPT_DEFAULTS = {
-    base: "あなたはブログ「Ayappi Blog」の編集者です。筆者「あやっぴ」の文章を校正してください。\n内容や主張は変えず、修正箇所ごとに理由を一言添えてください。",
-    presets: [
-      { key: "typo", label: "誤字脱字", text: "誤字脱字・変換ミス・ら抜き言葉を直してください。", on: true },
-      { key: "voice", label: "あやっぴの口調を保つ", text: "「こんにちは、あやっぴです。」で始まる、くだけすぎない丁寧語の口調はそのまま残してください。", on: true },
-      { key: "read", label: "読みやすく", text: "一文が長いところは読みやすく区切ってください。", on: false },
-      { key: "short", label: "短く", text: "冗長な言い回しを削って、全体を1割ほど短くしてください。", on: false }
-    ]
-  };
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 保存できなくても動作は続ける */ } }
   var S = Object.assign({}, DEFAULTS, lsGet("studio.settings", {}));
   if (S.claudeKey || S.openaiKey) { ["provider", "claudeKey", "claudeModel", "openaiKey", "openaiModel"].forEach(function (k) { delete S[k]; }); lsSet("studio.settings", S); } /* 以前の版で保存した API キーは消す */
-  var P = lsGet("studio.prompts", null) || JSON.parse(JSON.stringify(PROMPT_DEFAULTS));
   function siteBase() { var u = (S.siteUrl || "").trim(); if (!u) return new URL("../", location.href).href; return /\/$/.test(u) ? u : u + "/"; }
 
   /* ── 下書きの保存（IndexedDB。画像も含めて保存できる） ── */
@@ -169,7 +159,7 @@
       if (d.id === confirmId) {
         return '<div class="ditem"><div class="dconfirm" role="alertdialog" aria-label="下書きの削除"><p>「' + t + '」を削除しますか？</p><small>' + chars(d.html).toLocaleString() + "字の本文" + (Object.keys(d.images || {}).length ? "と添付画像" : "") + "が消えます。" + (d.articleId ? "公開済みの記事はそのまま残ります。" : "") + '</small><div><button class="btn btn--sm btn--danger" data-del="' + d.id + '">削除する</button><button class="btn btn--sm" data-cancel="1">キャンセル</button></div></div></div>';
       }
-      var badge = d.articleId ? '<span class="badge badge--live">公開済みを編集</span>' : d.status === "proof" ? '<span class="badge badge--proof">校正済み</span>' : '<span class="badge badge--draft">下書き</span>';
+      var badge = d.articleId ? '<span class="badge badge--live">公開済みを編集</span>' : '<span class="badge badge--draft">下書き</span>';
       return '<div class="ditem"><button class="drow" data-id="' + d.id + '" aria-current="' + (d === cur) + '"><div class="drow__t">' + t + '</div><div class="drow__m">' + badge + "<span>" + ago(d.updated) + '</span><span class="sp">' + chars(d.html).toLocaleString() + "字</span></div></button>" +
         '<button class="ddel" data-ask="' + d.id + '" title="この下書きを削除" aria-label="「' + t + '」を削除"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button></div>';
     }).join("") || '<div class="dempty">下書きはありません。<br>「新規」から書き始めましょう。</div>';
@@ -185,7 +175,6 @@
     body.innerHTML = d.html;
     $("#editingNote").classList.toggle("hidden", !d.articleId);
     $("#editingId").textContent = d.articleId ? "id: " + d.articleId + " · " + postPath(d) : "";
-    $("#results").innerHTML = "";
     meta(); renderList();
   }
   function meta() { $("#wc").textContent = chars(body.innerHTML).toLocaleString() + " 字"; }
@@ -358,72 +347,39 @@
     $("#steps").classList.toggle("hidden", !isWrite);
     $("#save").classList.toggle("hidden", !isWrite);
     $("#pageTitle").classList.toggle("hidden", isWrite);
-    $("#pageTitle").textContent = { published: "公開済みの記事", prompts: "校正プロンプト", settings: "設定" }[v] || "";
-    $("#vWrite").classList.toggle("is-on", isWrite && step <= 2);
-    $("#vPrev").classList.toggle("is-on", isWrite && step >= 3);
+    $("#pageTitle").textContent = { published: "公開済みの記事", settings: "設定" }[v] || "";
+    $("#vWrite").classList.toggle("is-on", isWrite && step === 1);
+    $("#vPrev").classList.toggle("is-on", isWrite && step >= 2);
     $("#vPublished").classList.toggle("is-on", v === "published");
-    $("#vPrompts").classList.toggle("is-on", v === "prompts");
     $("#vSettings").classList.toggle("is-on", v === "settings");
     if (v === "published") { if (pub.list) renderPublished(); else loadPublished(); }
-    if (v === "prompts") renderPromptEditor();
     if (v === "settings") fillSettings();
   }
   $$(".nav button").forEach(function (b) { b.addEventListener("click", function () { flush(); show(b.dataset.nav); }); });
 
   function go(n) {
-    if (n >= 3 && step <= 2) { flush(); postHtml = cur.htmlOverride || toSiteHtml(); }
+    if (n >= 2 && step === 1) { flush(); postHtml = cur.htmlOverride || toSiteHtml(); }
     step = n;
     $$(".step").forEach(function (s) {
       var k = +s.dataset.step;
       s.setAttribute("aria-current", k === n ? "step" : "false");
       s.classList.toggle("done", k < n);
     });
-    $("#vWrite").classList.toggle("is-on", n <= 2);
-    $("#vWrite").classList.toggle("proof", n === 2);
-    $("#vPrev").classList.toggle("is-on", n >= 3);
-    if (n >= 3) { showTab("post"); renderLive(); refreshChanges(); }
-    if (n === 4) openPublish();
+    $("#vWrite").classList.toggle("is-on", n === 1);
+    $("#vPrev").classList.toggle("is-on", n >= 2);
+    if (n >= 2) { showTab("post"); renderLive(); refreshChanges(); }
+    if (n === 3) openPublish();
   }
   $$(".step").forEach(function (s) { s.addEventListener("click", function () { go(+s.dataset.step); }); });
-  $("#closeAi").addEventListener("click", function () { go(1); });
-  $("#toPreview").addEventListener("click", function () { go(3); });
+  $("#toPreview").addEventListener("click", function () { go(2); });
   $("#backEdit").addEventListener("click", function () { go(1); });
 
-  /* ── AI 校正 ───────────────────────────── */
-  function renderChips() {
-    $("#presetChips").innerHTML = P.presets.map(function (p, i) { return '<button class="chip" aria-pressed="' + !!p.on + '" data-i="' + i + '">' + esc(p.label) + "</button>"; }).join("");
-  }
-  function buildPrompt() {
-    $("#prompt").value = P.base + "\n" + P.presets.filter(function (p) { return p.on; }).map(function (p) { return "・" + p.text; }).join("\n");
-  }
-  $("#presetChips").addEventListener("click", function (e) {
-    var c = e.target.closest(".chip"); if (!c) return;
-    var p = P.presets[+c.dataset.i]; p.on = !p.on; lsSet("studio.prompts", P); renderChips(); buildPrompt();
-  });
-
+  /* ── 全文コピー ─────────────────────────── */
   /* 本文をプレーンテキストに（段落ごとに改行） */
   function plainText() {
     unmarkAll();
     return Array.prototype.map.call(body.childNodes, function (n) { return n.nodeType === 1 ? n.innerText || n.textContent : n.nodeValue || ""; })
       .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
-  }
-  /* claude.ai / ChatGPT に貼り付ける文章 */
-  function copyText() {
-    return $("#prompt").value.trim() + "\n\n" +
-      "# 返事の形式\n" +
-      "次の形の JSON だけを ```json のコードブロックで返してください。説明文は不要です。\n" +
-      "```json\n" +
-      "{\n" +
-      "  \"suggestions\": [\n" +
-      "    { \"kind\": \"誤字\", \"from\": \"修正前の文字列\", \"to\": \"修正後の文字列\", \"why\": \"理由を一言\" }\n" +
-      "  ],\n" +
-      "  \"summary\": \"全体の印象を1〜2文で\"\n" +
-      "}\n" +
-      "```\n" +
-      "- from は本文にある文字列を一字一句そのまま、1つの段落の中から抜き出してください。\n" +
-      "- 修正が必要な箇所だけを入れてください。直す必要がなければ suggestions は [] にしてください。\n\n" +
-      "# タイトル\n" + (title.value.trim() || "（無題）") + "\n\n" +
-      "# 本文\n" + plainText();
   }
   function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -450,79 +406,7 @@
       clearTimeout(copyAllT); copyAllT = setTimeout(function () { btn.classList.remove("is-done"); label.textContent = "全文コピー"; }, 2000);
     }).catch(function (e) { toast({ error: true, title: e.message, msg: "ブラウザのクリップボード権限を確認してください" }); });
   });
-  var copyT;
-  $("#copyPrompt").addEventListener("click", function () {
-    var btn = this, label = btn.querySelector("span");
-    if (!plainText()) { $("#results").innerHTML = '<p class="ai__sum">本文が空です。</p>'; return; }
-    copyToClipboard(copyText()).then(function () {
-      btn.classList.add("is-done"); label.textContent = "コピーしました！ チャットに貼り付けてください";
-      clearTimeout(copyT); copyT = setTimeout(function () { btn.classList.remove("is-done"); label.textContent = "校正用テキストをコピー"; }, 2500);
-    }).catch(function (e) { toast({ error: true, title: e.message, msg: "ブラウザのクリップボード権限を確認してください" }); });
-  });
-
-  /* AI の返事から JSON を取り出す（```json ブロックや前後の説明文があっても読む） */
-  function parseReply(text) {
-    var t = String(text || "").trim();
-    if (!t) throw new Error("AI の返事を貼り付けてください");
-    var fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(t);
-    if (fence) t = fence[1];
-    var i = t.indexOf("{"), j = t.lastIndexOf("}");
-    if (i < 0 || j < i) throw new Error("返事の中に JSON が見つかりませんでした。AI に「JSON だけで返して」と頼み直してください");
-    t = t.slice(i, j + 1).replace(/[\u201c\u201d]/g, '"').replace(/,\s*([}\]])/g, "$1");
-    var res;
-    try { res = JSON.parse(t); } catch (e) { throw new Error("JSON の形が崩れていて読めませんでした。AI の返事をもう一度コピーし直すか、頼み直してください"); }
-    if (Array.isArray(res)) res = { suggestions: res };
-    return { suggestions: Array.isArray(res.suggestions) ? res.suggestions : [], summary: res.summary || "" };
-  }
-
-  var sugg = [];
-  $("#loadReply").addEventListener("click", function () {
-    var r = $("#results"), res;
-    try { res = parseReply($("#reply").value); } catch (e) { r.innerHTML = '<div class="ai__err">' + esc(e.message) + "</div>"; return; }
-    var text = plainText();
-    sugg = res.suggestions.filter(function (s) { return s && s.from && s.from !== s.to; })
-      .map(function (s) { s.to = s.to || ""; s.kind = s.kind || "提案"; s.why = s.why || ""; s.found = text.indexOf(s.from) >= 0; return s; });
-    r.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span class="label" style="margin:0">提案 ' + sugg.length + " 件</span>" + (sugg.some(function (s) { return s.found; }) ? '<button class="btn btn--sm" id="acceptAll">すべて採用</button>' : "") + "</div>" +
-      (sugg.length ? sugg.map(function (s, i) {
-        return '<div class="sugg" data-i="' + i + '"><div class="sugg__k">' + esc(s.kind) + (s.found ? "" : " · 本文で見つかりません") + '</div><div class="sugg__txt"><span class="diff-del">' + esc(s.from) + '</span> → <span class="diff-add">' + esc(s.to) + '</span></div><div class="sugg__why">' + esc(s.why) + '</div><div class="sugg__act">' +
-          (s.found ? '<button class="btn btn--sm btn--primary" data-a="ok">採用</button><button class="btn btn--sm" data-a="show">本文で見る</button>' : "") +
-          '<button class="btn btn--sm btn--ghost" data-a="no">却下</button></div></div>';
-      }).join("") : '<p class="ai__sum">直したい箇所は見つかりませんでした。このまま投稿できます。</p>') +
-      (res.summary ? '<p class="ai__sum" style="margin-top:12px">全体の印象：' + esc(res.summary) + "</p>" : "");
-    $("#reply").value = "";
-    r.scrollIntoView({ block: "start", behavior: "smooth" });
-    if (!sugg.length) markProofed();
-  });
-  function markProofed() { if (cur) { cur.status = "proof"; flush(); } }
-  $("#results").addEventListener("click", function (e) {
-    if (e.target.id === "acceptAll") { $$(".sugg:not(.done) [data-a=ok]").forEach(function (b) { b.click(); }); return; }
-    var b = e.target.closest("[data-a]"); if (!b) return;
-    var card = b.closest(".sugg"), s = sugg[+card.dataset.i];
-    if (b.dataset.a === "show") { highlight(s.from); return; }
-    if (b.dataset.a === "ok" && !replaceText(s.from, s.to)) {
-      card.querySelector(".sugg__k").textContent = s.kind + " · 書式の境目をまたぐため自動で直せません。本文で直接直してください";
-      return;
-    }
-    card.classList.add("done");
-    if (!$$(".sugg:not(.done)").length) markProofed();
-  });
-  function walk(fn) { var w = document.createTreeWalker(body, NodeFilter.SHOW_TEXT), n; while ((n = w.nextNode())) { if (fn(n)) return true; } return false; }
-  function replaceText(from, to) {
-    unmarkAll();
-    var ok = walk(function (n) { var i = n.nodeValue.indexOf(from); if (i < 0) return false; n.nodeValue = n.nodeValue.slice(0, i) + to + n.nodeValue.slice(i + from.length); return true; });
-    if (ok) dirty();
-    return ok;
-  }
   function unmarkAll() { $$("#body mark.hl").forEach(function (m) { m.replaceWith(document.createTextNode(m.textContent)); }); body.normalize(); }
-  function highlight(str) {
-    unmarkAll();
-    walk(function (n) {
-      var i = n.nodeValue.indexOf(str); if (i < 0) return false;
-      var r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + str.length);
-      var m = document.createElement("mark"); m.className = "hl"; r.surroundContents(m);
-      m.scrollIntoView({ block: "center", behavior: "smooth" }); return true;
-    });
-  }
 
   /* ── エディタ ⇄ サイト用 HTML ───────────────── */
   var BLOCK = { p: 1, h1: 1, h2: 1, h3: 1, h4: 1, ul: 1, ol: 1, li: 1, blockquote: 1, pre: 1, hr: 1, figure: 1, figcaption: 1, table: 1, thead: 1, tbody: 1, tr: 1, th: 1, td: 1 };
@@ -742,9 +626,9 @@
     };
   }
 
-  $("#toPublish").addEventListener("click", function () { go(4); });
+  $("#toPublish").addEventListener("click", function () { go(3); });
   function openPublish() {
-    if (!S.ghToken) { toast({ error: true, title: "GitHub のトークンが未設定です", msg: "左の「設定」から入力してください" }); step = 3; go(3); return; }
+    if (!S.ghToken) { toast({ error: true, title: "GitHub のトークンが未設定です", msg: "左の「設定」から入力してください" }); step = 2; go(2); return; }
     if (!title.value.trim()) { toast({ error: true, title: "タイトルを入れてください" }); go(1); title.focus(); return; }
     if (!cur.articleId && pub.list && pub.list.some(function (a) { return a.contentFile === "./" + postPath(cur); })) {
       toast({ error: true, title: "同じファイル名の記事がすでにあります", msg: postPath(cur) + " — 保存先のファイル名を変えてください" }); go(1); fname.focus(); return;
@@ -755,7 +639,7 @@
       msg: (cur.articleId ? "post: 「" + title.value.trim() + "」を更新" : "post: 「" + title.value.trim() + "」を公開"),
       go: cur.articleId ? "更新する" : "公開する",
       run: publish,
-      onCancel: function () { go(3); }
+      onCancel: function () { go(2); }
     });
   }
   function publish() {
@@ -846,7 +730,7 @@
     getText(a.contentFile.replace(/^\.\//, "")).then(function (html) {
       var d = blankDraft();
       d.articleId = a.id; d.contentFile = a.contentFile; d.title = a.title; d.date = L.toIsoDate(a.date) || today();
-      d.html = fromSiteHtml(html, {}); d.status = "proof";
+      d.html = fromSiteHtml(html, {});
       drafts.push(d); return store.put(d).then(function () { show("write"); step = 1; go(1); load(d); });
     }).catch(function (e) { toast({ error: true, title: "記事を読み込めませんでした", msg: e.message }); btn.disabled = false; btn.textContent = "編集"; });
   }
@@ -876,28 +760,6 @@
       }
     });
   }
-
-  /* ── 校正プロンプト編集 ─────────────────────── */
-  function renderPromptEditor() {
-    $("#pBase").value = P.base;
-    $("#presetList").innerHTML = P.presets.map(function (p, i) {
-      return '<div class="preset" data-i="' + i + '"><input class="input" data-k="label" value="' + esc(p.label) + '" aria-label="名前"><textarea class="textarea" data-k="text" aria-label="指示">' + esc(p.text) + '</textarea><button class="btn btn--sm btn--ghost" data-rm="' + i + '" aria-label="削除">✕</button></div>';
-    }).join("") || '<p class="help">プリセットはありません。</p>';
-  }
-  function readPromptEditor() {
-    P.base = $("#pBase").value;
-    $$("#presetList .preset").forEach(function (row) {
-      var p = P.presets[+row.dataset.i];
-      p.label = row.querySelector("[data-k=label]").value; p.text = row.querySelector("[data-k=text]").value;
-    });
-  }
-  $("#presetList").addEventListener("click", function (e) {
-    var b = e.target.closest("[data-rm]"); if (!b) return;
-    readPromptEditor(); P.presets.splice(+b.dataset.rm, 1); renderPromptEditor();
-  });
-  $("#addPreset").addEventListener("click", function () { readPromptEditor(); P.presets.push({ key: "p" + Date.now(), label: "新しいプリセット", text: "", on: false }); renderPromptEditor(); });
-  $("#savePrompts").addEventListener("click", function () { readPromptEditor(); lsSet("studio.prompts", P); renderChips(); buildPrompt(); toast({ title: "校正プロンプトを保存しました" }); });
-  $("#resetPrompts").addEventListener("click", function () { P = JSON.parse(JSON.stringify(PROMPT_DEFAULTS)); renderPromptEditor(); });
 
   /* ── 設定 ─────────────────────────────── */
   var form = $("#settingsForm");
@@ -938,7 +800,7 @@
   window.addEventListener("beforeunload", function () { snapshot(); store.put(cur); });
 
   /* ── 起動 ─────────────────────────────── */
-  renderChips(); buildPrompt(); setGh(false);
+  setGh(false);
   store.all().then(function (all) {
     drafts = all || [];
     if (!drafts.length) { var d = blankDraft(); drafts.push(d); store.put(d); }

@@ -278,6 +278,10 @@
   function setSync(t, bad) { var el = $("#syncState"); el.textContent = t; el.classList.toggle("bad", !!bad); }
   function newest() { return drafts.slice().sort(function (a, b) { return b.updated - a.updated; })[0]; }
 
+  /* スマホ幅では下書き一覧と編集画面を切り替える */
+  var mobile = window.matchMedia("(max-width: 760px)");
+  function showList(on) { $("#vWrite").classList.toggle("show-list", !!on); if (!on) window.scrollTo(0, 0); }
+
   /* ── 状態 ─────────────────────────────── */
   var drafts = [], cur = null, confirmId = null, step = 1, view = "write";
   var body = $("#body"), title = $("#title"), date = $("#date"), fname = $("#fname");
@@ -377,7 +381,7 @@
     if (del) { removeDraft(del.dataset.del); return; }
     var b = e.target.closest(".drow"); if (!b) return;
     confirmId = null;
-    flush().then(function () { load(drafts.filter(function (d) { return d.id === b.dataset.id; })[0]); });
+    flush().then(function () { load(drafts.filter(function (d) { return d.id === b.dataset.id; })[0]); showList(false); });
   });
   $("#dList").addEventListener("keydown", function (e) { if (e.key === "Escape" && confirmId) { confirmId = null; renderList(); } });
   function removeDraft(id, silent) {
@@ -398,8 +402,9 @@
     }, ttl: 10000 });
   }
   $("#dSearch").addEventListener("input", renderList);
+  $("#backToList").addEventListener("click", function () { flush(); showList(true); });
   $("#newDraft").addEventListener("click", function () {
-    flush().then(function () { var d = blankDraft(); drafts.push(d); store.put(d); load(d); title.focus(); });
+    flush().then(function () { var d = blankDraft(); drafts.push(d); store.put(d); load(d); showList(false); title.focus(); });
   });
 
   /* ── 書式 ─────────────────────────────── */
@@ -881,7 +886,7 @@
         $("#scrim").classList.remove("open"); modalCancel = null;
         removeDraft(d.id, true);
         if (d.remoteUpdated) deleteDraftRemote(d).catch(function (e) { toast({ error: true, title: "GitHub の下書きを削除できませんでした", msg: e.message + "（下書き一覧から手動で削除してください）" }); });
-        step = 1; go(1);
+        step = 1; go(1); if (mobile.matches) showList(true);
         toast({
           title: d.articleId ? "更新しました" : "公開しました",
           msg: "「" + plan.entry.title + "」を push しました。GitHub Pages への反映には 1〜2 分かかります。",
@@ -928,14 +933,14 @@
   });
   function editPublished(id, btn) {
     var existing = drafts.filter(function (d) { return Number(d.articleId) === id; })[0];
-    if (existing) { show("write"); step = 1; go(1); load(existing); return; }
+    if (existing) { show("write"); step = 1; go(1); load(existing); showList(false); return; }
     var a = pub.list.filter(function (x) { return Number(x.id) === id; })[0];
     btn.disabled = true; btn.textContent = "読み込み中…";
     getText(a.contentFile.replace(/^\.\//, "")).then(function (html) {
       var d = blankDraft();
       d.articleId = a.id; d.contentFile = a.contentFile; d.title = a.title; d.date = L.toIsoDate(a.date) || today();
       d.html = fromSiteHtml(html, {});
-      drafts.push(d); return store.put(d).then(function () { show("write"); step = 1; go(1); load(d); });
+      drafts.push(d); return store.put(d).then(function () { show("write"); step = 1; go(1); load(d); showList(false); });
     }).catch(function (e) { toast({ error: true, title: "記事を読み込めませんでした", msg: e.message }); btn.disabled = false; btn.textContent = "編集"; });
   }
   function deletePublished(id) {
@@ -1018,6 +1023,7 @@
     drafts = all || [];
     if (!drafts.length) { var d = blankDraft(); drafts.push(d); store.put(d); }
     load(newest());
+    if (mobile.matches) showList(true);
     if (!S.ghToken) { show("settings"); setSync("GitHub に接続すると、どの端末からでも下書きを開けます"); toast({ title: "はじめに設定をしてください", msg: "GitHub のトークンを入れると使えるようになります。", ttl: 8000 }); }
     else { loadPublished(); syncDrafts(); }
   });

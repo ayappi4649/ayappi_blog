@@ -16,6 +16,7 @@ html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 13px/1.6 var(--font-sans); overflow: hidden; }
 button, input, textarea, select { font-family: inherit; }
 .hidden { display: none !important; }
+.mobile-only { display: none; }
 
 /* components */
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: var(--radius-input); border: 1px solid var(--input-border); background: var(--bg); color: var(--ink); font: 700 13px/1.2 var(--font-sans); cursor: pointer; white-space: nowrap; text-decoration: none; }
@@ -117,6 +118,7 @@ button, input, textarea, select { font-family: inherit; }
 .drow__m { margin-top: 6px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
 .drow__m .sp { margin-left: auto; }
 .ddel { position: absolute; top: 9px; right: 8px; width: 30px; height: 30px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); cursor: pointer; display: grid; place-items: center; opacity: 0; }
+@media (hover: none) { .ddel { opacity: 1; } }
 .ditem:hover .ddel, .ddel:focus-visible, .drow[aria-current="true"] + .ddel { opacity: 1; }
 .ddel:hover { background: var(--danger-bg); color: var(--danger); }
 .ddel svg { width: 16px; height: 16px; }
@@ -253,7 +255,18 @@ button, input, textarea, select { font-family: inherit; }
   .nav { flex-direction: row; flex-wrap: wrap; }
   .top { height: auto; padding: 10px 16px; flex-wrap: wrap; }
   .v-write { grid-template-columns: 1fr; }
-  .v-write .drafts { display: none; }
+  /* スマホでは「下書き一覧」と「編集画面」を切り替えて表示 */
+  .mobile-only { display: inline-flex; }
+  .v-write .drafts { display: none; border-right: 0; }
+  .v-write.show-list .drafts { display: flex; min-height: calc(100vh - 160px); }
+  .v-write.show-list .editor-wrap { display: none; }
+  .drafts__list { overflow: visible; }
+  .drow { padding: 14px 48px 14px 12px; }
+  .ddel { opacity: 1; top: 12px; }
+  .editor-wrap { overflow: visible; }
+  .body { min-height: 240px; }
+  .next-bar { flex-wrap: wrap; padding: 10px 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .next-bar .btn { flex: 1 1 auto; }
   .editor { padding: 16px 16px 0; }
   .meta .fname { width: 100%; max-width: 220px; }
   .steps { flex-wrap: wrap; }
@@ -313,6 +326,7 @@ button, input, textarea, select { font-family: inherit; }
 
       <div class="editor-wrap">
         <div class="editor">
+          <button class="btn btn--ghost btn--sm mobile-only" id="backToList" style="margin:0 0 8px -10px">← 下書き一覧</button>
           <div class="sync-note hidden" id="syncNote"><span>他の端末で、この下書きの新しい版が GitHub に保存されています。</span><button class="btn btn--sm" id="takeRemote">GitHub の版を読み込む</button></div>
           <div class="editing-note hidden" id="editingNote"><span class="badge badge--live">公開済みを編集中</span><span id="editingId"></span></div>
           <input class="title-in" id="title" placeholder="タイトル" aria-label="タイトル">

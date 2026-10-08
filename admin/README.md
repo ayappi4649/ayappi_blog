@@ -4,17 +4,15 @@ Ayappi Blog の記事を「執筆 → AI校正 → HTMLプレビュー → GitHu
 サーバーは不要で、GitHub Pages 上の `admin/` をブラウザで開くだけで使えます。
 
 - URL: `https://ayappi4649.github.io/ayappi_blog/admin/`
-- 下書き・設定・API キーは **そのブラウザの中だけ** に保存されます（リポジトリには入りません）。
+- 下書き・設定・トークンは **そのブラウザの中だけ** に保存されます（リポジトリには入りません）。
+- AI 校正は claude.ai / ChatGPT のチャット画面へのコピペで行うので、API の料金はかかりません。
 
 ## はじめに（設定）
 
-左メニューの「設定」で次を入力して保存します。
+左メニューの「設定」で GitHub トークンを入力して保存します。
 
-| 項目 | 内容 |
-| --- | --- |
-| GitHub トークン | Fine-grained personal access token。対象リポジトリを `ayappi4649/ayappi_blog` だけにし、権限は **Contents: Read and write** のみ |
-| Claude API キー | console.anthropic.com で発行（使う場合のみ） |
-| OpenAI API キー | platform.openai.com で発行（使う場合のみ）。モデル名は自由に書き換え可 |
+- Fine-grained personal access token（https://github.com/settings/personal-access-tokens/new ）
+- Repository access は `ayappi4649/ayappi_blog` だけ、権限は **Contents: Read and write** のみ
 
 「GitHub 接続を確認」で「書き込み可」と出れば準備完了です。
 
@@ -43,12 +41,17 @@ Ayappi Blog の記事を「執筆 → AI校正 → HTMLプレビュー → GitHu
 ## 機能
 
 - **執筆**：見出し・太字・下線・文字色・リンク・画像＋キャプション。大きな写真は幅 1600px の JPEG に自動縮小。
-- **AI 校正**：Claude / GPT を切り替え。提案ごとに「採用 / 本文で見る / 却下」。プロンプトは「校正プロンプト」で編集可。
+- **AI 校正**（コピペ方式）：
+  1. 「校正用テキストをコピー」で、校正の指示と本文をまとめてコピー
+  2. claude.ai か ChatGPT に貼り付けて送る（無料プランでも可）
+  3. 返事をまるごと貼り付けて「提案を読み込む」→ 提案ごとに「採用 / 本文で見る / 却下」
+
+  校正の指示は「校正プロンプト」画面で編集できます。
 - **HTMLプレビュー**：実際の `article.html` のスタイルで PC / スマホ表示を確認。HTML を直接直すこともできます。
 - **公開済み**：`articles.js` の一覧から記事を開いて編集・更新、または削除（記事ファイルと一覧の項目を削除するコミットを作成）。
 
 ## ファイル
 
 - `index.html` — 画面
-- `app.js` — 画面の動作（GitHub API・AI API の呼び出し）
+- `app.js` — 画面の動作（GitHub API の呼び出し、AI 校正のコピペ処理など）
 - `lib.js` — `articles.js` の読み書きなど DOM に依存しない処理

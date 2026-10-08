@@ -11,8 +11,7 @@
   /* ── 設定 ─────────────────────────────── */
   var DEFAULTS = {
     owner: "ayappi4649", repo: "ayappi_blog", branch: "main", ghToken: "",
-    siteUrl: "https://ayappi4649.github.io/ayappi_blog/",
-    provider: "Claude", claudeKey: "", claudeModel: "claude-opus-5-5", openaiKey: "", openaiModel: "gpt-5"
+    siteUrl: "https://ayappi4649.github.io/ayappi_blog/"
   };
   var PROMPT_DEFAULTS = {
     base: "あなたはブログ「Ayappi Blog」の編集者です。筆者「あやっぴ」の文章を校正してください。\n内容や主張は変えず、修正箇所ごとに理由を一言添えてください。",
@@ -26,6 +25,7 @@
   function lsGet(k, d) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 保存できなくても動作は続ける */ } }
   var S = Object.assign({}, DEFAULTS, lsGet("studio.settings", {}));
+  if (S.claudeKey || S.openaiKey) { ["provider", "claudeKey", "claudeModel", "openaiKey", "openaiModel"].forEach(function (k) { delete S[k]; }); lsSet("studio.settings", S); } /* 以前の版で保存した API キーは消す */
   var P = lsGet("studio.prompts", null) || JSON.parse(JSON.stringify(PROMPT_DEFAULTS));
   function siteBase() { var u = (S.siteUrl || "").trim(); if (!u) return new URL("../", location.href).href; return /\/$/.test(u) ? u : u + "/"; }
 
@@ -382,7 +382,6 @@
     $("#vWrite").classList.toggle("proof", n === 2);
     $("#vPrev").classList.toggle("is-on", n >= 3);
     if (n >= 3) { showTab("post"); renderLive(); refreshChanges(); }
-    if (n === 2) updateModelLabel();
     if (n === 4) openPublish();
   }
   $$(".step").forEach(function (s) { s.addEventListener("click", function () { go(+s.dataset.step); }); });
@@ -402,107 +401,87 @@
     var c = e.target.closest(".chip"); if (!c) return;
     var p = P.presets[+c.dataset.i]; p.on = !p.on; lsSet("studio.prompts", P); renderChips(); buildPrompt();
   });
-  $$("#provider button").forEach(function (b) {
-    b.addEventListener("click", function () { S.provider = b.dataset.m; lsSet("studio.settings", S); updateModelLabel(); });
-  });
-  function updateModelLabel() {
-    $$("#provider button").forEach(function (x) { x.setAttribute("aria-pressed", x.dataset.m === S.provider); });
-    var claude = S.provider === "Claude";
-    var key = claude ? S.claudeKey : S.openaiKey;
-    $("#modelName").textContent = (claude ? S.claudeModel : S.openaiModel) + (key ? "" : " · API キーが未設定です（設定から入力）");
-    $("#runAi").textContent = S.provider + " で校正する";
-  }
 
-  var SCHEMA = {
-    type: "object", additionalProperties: false, required: ["suggestions", "summary"],
-    properties: {
-      suggestions: {
-        type: "array",
-        items: {
-          type: "object", additionalProperties: false, required: ["kind", "from", "to", "why"],
-          properties: {
-            kind: { type: "string", description: "誤字 / ら抜き言葉 / 表現 / 読みやすさ など修正の種類" },
-            from: { type: "string", description: "本文から一字一句そのまま抜き出した修正前の文字列（1つの段落の中に収まる長さ）" },
-            to: { type: "string", description: "修正後の文字列" },
-            why: { type: "string", description: "理由を一言" }
-          }
-        }
-      },
-      summary: { type: "string", description: "全体の印象を1〜2文で" }
-    }
-  };
+  /* 本文をプレーンテキストに（段落ごとに改行） */
   function plainText() {
     unmarkAll();
     return Array.prototype.map.call(body.childNodes, function (n) { return n.nodeType === 1 ? n.innerText || n.textContent : n.nodeValue || ""; })
       .map(function (s) { return s.trim(); }).filter(Boolean).join("\n");
   }
-  function userMessage() {
-    return "タイトル：" + (title.value || "（無題）") + "\n\n本文：\n" + plainText() +
-      "\n\n修正が必要な箇所だけを suggestions に入れてください。from は本文に実際にある文字列をそのまま使ってください。直す必要がなければ空の配列にしてください。";
+  /* claude.ai / ChatGPT に貼り付ける文章 */
+  function copyText() {
+    return $("#prompt").value.trim() + "\n\n" +
+      "# 返事の形式\n" +
+      "次の形の JSON だけを ```json のコードブロックで返してください。説明文は不要です。\n" +
+      "```json\n" +
+      "{\n" +
+      "  \"suggestions\": [\n" +
+      "    { \"kind\": \"誤字\", \"from\": \"修正前の文字列\", \"to\": \"修正後の文字列\", \"why\": \"理由を一言\" }\n" +
+      "  ],\n" +
+      "  \"summary\": \"全体の印象を1〜2文で\"\n" +
+      "}\n" +
+      "```\n" +
+      "- from は本文にある文字列を一字一句そのまま、1つの段落の中から抜き出してください。\n" +
+      "- 修正が必要な箇所だけを入れてください。直す必要がなければ suggestions は [] にしてください。\n\n" +
+      "# タイトル\n" + (title.value.trim() || "（無題）") + "\n\n" +
+      "# 本文\n" + plainText();
   }
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function () { return legacyCopy(text); });
+    }
+    return legacyCopy(text);
+  }
+  function legacyCopy(text) {
+    var t = document.createElement("textarea");
+    t.value = text; t.setAttribute("readonly", ""); t.style.position = "fixed"; t.style.opacity = "0";
+    document.body.appendChild(t); t.select();
+    var ok = false; try { ok = document.execCommand("copy"); } catch (e) { /* noop */ }
+    t.remove();
+    return ok ? Promise.resolve() : Promise.reject(new Error("コピーできませんでした"));
+  }
+  var copyT;
+  $("#copyPrompt").addEventListener("click", function () {
+    var btn = this, label = btn.querySelector("span");
+    if (!plainText()) { $("#results").innerHTML = '<p class="ai__sum">本文が空です。</p>'; return; }
+    copyToClipboard(copyText()).then(function () {
+      btn.classList.add("is-done"); label.textContent = "コピーしました！ チャットに貼り付けてください";
+      clearTimeout(copyT); copyT = setTimeout(function () { btn.classList.remove("is-done"); label.textContent = "校正用テキストをコピー"; }, 2500);
+    }).catch(function (e) { toast({ error: true, title: e.message, msg: "ブラウザのクリップボード権限を確認してください" }); });
+  });
 
-  function callClaude(system, user) {
-    var model = S.claudeModel || DEFAULTS.claudeModel;
-    var body = {
-      model: model, max_tokens: 16000, system: system,
-      messages: [{ role: "user", content: user }],
-      output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } }
-    };
-    var headers = {
-      "content-type": "application/json", "x-api-key": S.claudeKey, "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true"
-    };
-    /* 安全分類器で断られたときにサーバー側で別モデルへ切り替える */
-    if (/^claude-(opus-5|sonnet-5-5|fable-5-1)/.test(model)) { body.fallbacks = "default"; headers["anthropic-beta"] = "server-side-fallback-2026-07-01"; }
-    return fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers: headers, body: JSON.stringify(body) })
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error("Claude " + r.status + ": " + ((j.error && j.error.message) || r.statusText)); return j; }); })
-      .then(function (j) {
-        if (j.stop_reason === "refusal") throw new Error("Claude がこのリクエストを断りました" + (j.stop_details && j.stop_details.explanation ? "：" + j.stop_details.explanation : ""));
-        if (j.stop_reason === "max_tokens") throw new Error("出力が長すぎて途中で切れました。本文を分けて校正してください");
-        var t = (j.content || []).filter(function (c) { return c.type === "text"; }).map(function (c) { return c.text; }).join("");
-        return JSON.parse(t);
-      });
-  }
-  function callOpenAI(system, user) {
-    return fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: { "content-type": "application/json", Authorization: "Bearer " + S.openaiKey },
-      body: JSON.stringify({
-        model: S.openaiModel || DEFAULTS.openaiModel,
-        messages: [{ role: "system", content: system }, { role: "user", content: user }],
-        response_format: { type: "json_schema", json_schema: { name: "proofread", strict: true, schema: SCHEMA } }
-      })
-    }).then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error("OpenAI " + r.status + ": " + ((j.error && j.error.message) || r.statusText)); return j; }); })
-      .then(function (j) {
-        var m = j.choices && j.choices[0] && j.choices[0].message;
-        if (!m) throw new Error("OpenAI から応答がありませんでした");
-        if (m.refusal) throw new Error("GPT がこのリクエストを断りました：" + m.refusal);
-        return JSON.parse(m.content);
-      });
+  /* AI の返事から JSON を取り出す（```json ブロックや前後の説明文があっても読む） */
+  function parseReply(text) {
+    var t = String(text || "").trim();
+    if (!t) throw new Error("AI の返事を貼り付けてください");
+    var fence = /```(?:json)?\s*([\s\S]*?)```/i.exec(t);
+    if (fence) t = fence[1];
+    var i = t.indexOf("{"), j = t.lastIndexOf("}");
+    if (i < 0 || j < i) throw new Error("返事の中に JSON が見つかりませんでした。AI に「JSON だけで返して」と頼み直してください");
+    t = t.slice(i, j + 1).replace(/[\u201c\u201d]/g, '"').replace(/,\s*([}\]])/g, "$1");
+    var res;
+    try { res = JSON.parse(t); } catch (e) { throw new Error("JSON の形が崩れていて読めませんでした。AI の返事をもう一度コピーし直すか、頼み直してください"); }
+    if (Array.isArray(res)) res = { suggestions: res };
+    return { suggestions: Array.isArray(res.suggestions) ? res.suggestions : [], summary: res.summary || "" };
   }
 
   var sugg = [];
-  $("#runAi").addEventListener("click", function () {
-    var claude = S.provider === "Claude", r = $("#results"), btn = this;
-    if (!(claude ? S.claudeKey : S.openaiKey)) { r.innerHTML = '<div class="ai__err">' + S.provider + " の API キーが未設定です。左の「設定」から入力してください。</div>"; return; }
-    if (!plainText()) { r.innerHTML = '<p class="ai__sum">本文が空です。</p>'; return; }
-    r.innerHTML = '<span class="label">' + S.provider + ' が読んでいます…</span><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
-    btn.disabled = true;
-    (claude ? callClaude : callOpenAI)($("#prompt").value, userMessage()).then(function (res) {
-      var text = plainText();
-      sugg = (res.suggestions || []).filter(function (s) { return s.from && s.from !== s.to; })
-        .map(function (s) { s.found = text.indexOf(s.from) >= 0; return s; });
-      r.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span class="label" style="margin:0">提案 ' + sugg.length + " 件 · " + esc(S.provider) + "</span>" + (sugg.some(function (s) { return s.found; }) ? '<button class="btn btn--sm" id="acceptAll">すべて採用</button>' : "") + "</div>" +
-        (sugg.length ? sugg.map(function (s, i) {
-          return '<div class="sugg" data-i="' + i + '"><div class="sugg__k">' + esc(s.kind) + (s.found ? "" : " · 本文で見つかりません") + '</div><div class="sugg__txt"><span class="diff-del">' + esc(s.from) + '</span> → <span class="diff-add">' + esc(s.to) + '</span></div><div class="sugg__why">' + esc(s.why) + '</div><div class="sugg__act">' +
-            (s.found ? '<button class="btn btn--sm btn--primary" data-a="ok">採用</button><button class="btn btn--sm" data-a="show">本文で見る</button>' : "") +
-            '<button class="btn btn--sm btn--ghost" data-a="no">却下</button></div></div>';
-        }).join("") : '<p class="ai__sum">直したい箇所は見つかりませんでした。このまま投稿できます。</p>') +
-        (res.summary ? '<p class="ai__sum" style="margin-top:12px">全体の印象：' + esc(res.summary) + "</p>" : "");
-      if (!sugg.length) markProofed();
-    }).catch(function (e) {
-      r.innerHTML = '<div class="ai__err">' + esc(e.message) + "</div>";
-    }).then(function () { btn.disabled = false; });
+  $("#loadReply").addEventListener("click", function () {
+    var r = $("#results"), res;
+    try { res = parseReply($("#reply").value); } catch (e) { r.innerHTML = '<div class="ai__err">' + esc(e.message) + "</div>"; return; }
+    var text = plainText();
+    sugg = res.suggestions.filter(function (s) { return s && s.from && s.from !== s.to; })
+      .map(function (s) { s.to = s.to || ""; s.kind = s.kind || "提案"; s.why = s.why || ""; s.found = text.indexOf(s.from) >= 0; return s; });
+    r.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span class="label" style="margin:0">提案 ' + sugg.length + " 件</span>" + (sugg.some(function (s) { return s.found; }) ? '<button class="btn btn--sm" id="acceptAll">すべて採用</button>' : "") + "</div>" +
+      (sugg.length ? sugg.map(function (s, i) {
+        return '<div class="sugg" data-i="' + i + '"><div class="sugg__k">' + esc(s.kind) + (s.found ? "" : " · 本文で見つかりません") + '</div><div class="sugg__txt"><span class="diff-del">' + esc(s.from) + '</span> → <span class="diff-add">' + esc(s.to) + '</span></div><div class="sugg__why">' + esc(s.why) + '</div><div class="sugg__act">' +
+          (s.found ? '<button class="btn btn--sm btn--primary" data-a="ok">採用</button><button class="btn btn--sm" data-a="show">本文で見る</button>' : "") +
+          '<button class="btn btn--sm btn--ghost" data-a="no">却下</button></div></div>';
+      }).join("") : '<p class="ai__sum">直したい箇所は見つかりませんでした。このまま投稿できます。</p>') +
+      (res.summary ? '<p class="ai__sum" style="margin-top:12px">全体の印象：' + esc(res.summary) + "</p>" : "");
+    $("#reply").value = "";
+    r.scrollIntoView({ block: "start", behavior: "smooth" });
+    if (!sugg.length) markProofed();
   });
   function markProofed() { if (cur) { cur.status = "proof"; flush(); } }
   $("#results").addEventListener("click", function (e) {
@@ -912,11 +891,11 @@
 
   /* ── 設定 ─────────────────────────────── */
   var form = $("#settingsForm");
-  function fillSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "claudeKey", "claudeModel", "openaiKey", "openaiModel"].forEach(function (k) { form.elements[k].value = S[k] || ""; }); }
-  function readSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl", "claudeKey", "claudeModel", "openaiKey", "openaiModel"].forEach(function (k) { S[k] = form.elements[k].value.trim(); }); lsSet("studio.settings", S); }
+  function fillSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl"].forEach(function (k) { form.elements[k].value = S[k] || ""; }); }
+  function readSettings() { ["owner", "repo", "branch", "ghToken", "siteUrl"].forEach(function (k) { S[k] = form.elements[k].value.trim(); }); lsSet("studio.settings", S); }
   form.addEventListener("submit", function (e) {
     e.preventDefault(); readSettings(); pub.list = null;
-    toast({ title: "設定を保存しました" }); updateModelLabel(); loadPublished().then(testBadge);
+    toast({ title: "設定を保存しました" }); loadPublished().then(testBadge);
   });
   function testBadge() {
     var b = $("#ghTest");
@@ -949,12 +928,12 @@
   window.addEventListener("beforeunload", function () { snapshot(); store.put(cur); });
 
   /* ── 起動 ─────────────────────────────── */
-  renderChips(); buildPrompt(); updateModelLabel(); setGh(false);
+  renderChips(); buildPrompt(); setGh(false);
   store.all().then(function (all) {
     drafts = all || [];
     if (!drafts.length) { var d = blankDraft(); drafts.push(d); store.put(d); }
     load(drafts.slice().sort(function (a, b) { return b.updated - a.updated; })[0]);
-    if (!S.ghToken) { show("settings"); toast({ title: "はじめに設定をしてください", msg: "GitHub のトークンと、使う AI の API キーを入れると使えるようになります。", ttl: 8000 }); }
+    if (!S.ghToken) { show("settings"); toast({ title: "はじめに設定をしてください", msg: "GitHub のトークンを入れると使えるようになります。", ttl: 8000 }); }
     else loadPublished();
   });
   setInterval(renderList, 30000);

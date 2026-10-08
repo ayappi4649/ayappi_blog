@@ -172,6 +172,11 @@ button, input, textarea, select { font-family: inherit; }
 .ai__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid var(--line); }
 .ai__body { flex: 1; overflow: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 16px; }
 .ai__body > * { flex: none; }
+.ai .label { display: flex; align-items: center; gap: 8px; }
+.ai .num { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--frog); color: var(--on-frog); font-size: 10.5px; letter-spacing: 0; }
+.open-ai { display: flex; gap: 6px; margin-top: 8px; }
+.open-ai .btn { flex: 1; }
+.btn.is-done { background: var(--success); border-color: var(--success); color: var(--bg); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .ai textarea { min-height: 120px; font-size: 13px; line-height: 1.7; }
 .sugg { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
@@ -394,19 +399,24 @@ button, input, textarea, select { font-family: inherit; }
           </div>
           <div class="ai__body">
             <div>
-              <span class="label">Model</span>
-              <div class="seg" id="provider">
-                <button aria-pressed="false" data-m="GPT">GPT</button>
-                <button aria-pressed="true" data-m="Claude">Claude</button>
-              </div>
-              <div class="ai__sum" id="modelName" style="margin-top:6px"></div>
+              <span class="label"><b class="num">1</b>校正の指示</span>
+              <div class="chips" id="presetChips"></div>
+              <textarea class="textarea" id="prompt" aria-label="校正の指示"></textarea>
             </div>
             <div>
-              <span class="label">校正プロンプト</span>
-              <div class="chips" id="presetChips"></div>
-              <textarea class="textarea" id="prompt" aria-label="校正プロンプト"></textarea>
+              <span class="label"><b class="num">2</b>コピーして AI に送る</span>
+              <button class="btn btn--primary" id="copyPrompt" style="width:100%"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg><span>校正用テキストをコピー</span></button>
+              <div class="open-ai">
+                <a class="btn btn--sm" href="https://claude.ai/new" target="_blank" rel="noopener">Claude を開く ↗</a>
+                <a class="btn btn--sm" href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT を開く ↗</a>
+              </div>
+              <p class="ai__sum" style="margin:8px 0 0">指示と本文がまとめてコピーされます。チャット画面に貼り付けて送ってください（無料プランでも使えます）。</p>
             </div>
-            <button class="btn btn--primary" id="runAi">Claude で校正する</button>
+            <div>
+              <label class="label" for="reply"><b class="num">3</b>AI の返事を貼り付け</label>
+              <textarea class="textarea" id="reply" placeholder="AI の返事をまるごと貼り付け" style="min-height:96px"></textarea>
+              <button class="btn" id="loadReply" style="width:100%;margin-top:8px">提案を読み込む</button>
+            </div>
             <div id="results"></div>
           </div>
         </div>
@@ -498,27 +508,6 @@ button, input, textarea, select { font-family: inherit; }
             <label><span class="label">Personal access token</span><input class="input" type="password" name="ghToken" placeholder="github_pat_..."></label>
             <p class="help">Fine-grained token で、このリポジトリだけに <code>Contents: Read and write</code> を付けたものを使ってください。トークンはこのブラウザにだけ保存され、GitHub 以外には送られません。</p>
             <label><span class="label">サイトの URL</span><input class="input" name="siteUrl" placeholder="https://ayappi4649.github.io/ayappi_blog/"></label>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel__head"><h3 class="title">Claude（Anthropic）</h3></div>
-          <div class="panel__body">
-            <div class="grid2">
-              <label><span class="label">API キー</span><input class="input" type="password" name="claudeKey" placeholder="sk-ant-..."></label>
-              <label><span class="label">モデル</span><input class="input" name="claudeModel" list="claudeModels"></label>
-            </div>
-            <datalist id="claudeModels"><option value="claude-opus-5-5"><option value="claude-sonnet-5-5"><option value="claude-haiku-5-5"></datalist>
-            <p class="help">API キーは console.anthropic.com で発行できます。ブラウザから Anthropic API へ直接送信します。</p>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel__head"><h3 class="title">GPT（OpenAI）</h3></div>
-          <div class="panel__body">
-            <div class="grid2">
-              <label><span class="label">API キー</span><input class="input" type="password" name="openaiKey" placeholder="sk-..."></label>
-              <label><span class="label">モデル</span><input class="input" name="openaiModel"></label>
-            </div>
-            <p class="help">API キーは platform.openai.com で発行できます。モデル名は使いたいものに書き換えてください。</p>
           </div>
         </div>
         <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px">

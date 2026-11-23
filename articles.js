@@ -111,4 +111,11 @@ window.ARTICLES = [
   date: "2026/9/7",
   contentFile: "./posts/社会人半年目になり、ふと人生について考えてみる.html"
 },
+{
+  id: 17,
+  year: 2026,
+  title: "Opus 5.5 を使って、VRCワールド作ってみた",
+  date: "2026/10/8",
+  contentFile: "./posts/Opus5.5を使って、VRCワールド作ってみた.html"
+},
 ];

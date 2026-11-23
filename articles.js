@@ -115,7 +115,7 @@ window.ARTICLES = [
   id: 17,
   year: 2026,
   title: "Opus 5.5 を使って、VRCワールド作ってみた",
-  date: "2026/10/8",
+  date: "2026/11/23",
   contentFile: "./posts/Opus5.5を使って、VRCワールド作ってみた.html"
 },
 ];
